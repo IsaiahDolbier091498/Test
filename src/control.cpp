@@ -5,6 +5,8 @@
 #include <math.h>
 //Handles altitude estimation and control surface logic (Initializing and reading the IMU, Calculating orientation using quaternions and converting to pitch/roll/yaw, computing servo corrections from orientation and velocity, driving servo motors to correct rocket orientation)
 
+unsigned long logTime = millis();
+
 // --- IMU Config ---
 Adafruit_BNO08x bno08x(5); // reset pin
 sh2_SensorValue_t sensorValue;
