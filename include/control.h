@@ -5,4 +5,8 @@
 void initServos();
 void updateIMUandServos();
 
+extern float adjustedPitch;
+extern float adjustedRoll;
+extern float adjustedYaw;
+
 #endif
