@@ -8,5 +8,9 @@ void updateIMUandServos();
 extern float adjustedPitch;
 extern float adjustedRoll;
 extern float adjustedYaw;
+extern int s1;
+extern int s2;
+extern int s3;
+extern int s4;
 
 #endif
