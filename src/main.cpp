@@ -3,6 +3,10 @@
 #include "control.h"
 #include "SDWriter.h"
 
+unsigned long lastLogTime = 0;
+const unsigned long logInterval = 20;
+
+
 //Calls initialization routines(initSensors, initServos, ) during setup()
 //Repeatedly updates sensors and control surfaces in loop()
 void setup() {
@@ -16,5 +20,12 @@ void setup() {
 void loop() {
   updateAltitude();
   updateIMUandServos();
-  SDCardWrite();
+
+  unsigned long now = millis();
+  if (now - lastLogTime >= logInterval)
+  {
+    SDCardWrite(now);
+    lastLogTime = now;
+  }
+
 }

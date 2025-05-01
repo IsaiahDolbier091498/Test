@@ -24,7 +24,7 @@ void initSDCard()
 }
 
 // Main function that writes to the SD card. Uses commas as delimiter
-void SDCardWrite()
+void SDCardWrite(unsigned long timeStamp)
 {
     File myFile = SD.open("Telemetry.csv", FILE_WRITE);
 
@@ -37,7 +37,7 @@ void SDCardWrite()
         }
 
         // If the file exists write the Telemetry rounded to the fifth decimal point
-        myFile.printf("%.5f,%.5f,%.5f,%.5f,%.5f,%d,%d,%d,%d,%lu\n", relativeAltitude, velocity, adjustedRoll, adjustedPitch, adjustedYaw, s1, s2, s3, s4, millis());
+        myFile.printf("%.5f,%.5f,%.5f,%.5f,%.5f,%d,%d,%d,%d,%lu\n", relativeAltitude, velocity, adjustedRoll, adjustedPitch, adjustedYaw, s1, s2, s3, s4, timeStamp);
         myFile.close();
     }
     else

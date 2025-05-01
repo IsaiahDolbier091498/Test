@@ -23,6 +23,9 @@ float Kv = 0.5; //Gain for adding vertical velocity (climb rate) influence into 
 
 Servo servo1, servo2, servo3, servo4; //Create servo objects
 
+int s1, s2, s3, s4;
+
+float adjustedPitch, adjustedRoll, adjustedYaw;
 
 //Attaching servos to pins
 void initServos() {
@@ -88,9 +91,9 @@ void updateIMUandServos() {
   yaw   *= 180.0 / PI;
 
   //Axis orientation
-  float adjustedPitch = pitch;
-  float adjustedRoll  = roll;
-  float adjustedYaw   = yaw;
+  adjustedPitch = pitch;
+  adjustedRoll  = roll;
+  adjustedYaw   = yaw;
 
   //Sends data over serial
   Serial.print("Pitch: "); Serial.print(adjustedPitch);
@@ -100,18 +103,18 @@ void updateIMUandServos() {
   Serial.print(" | Alt: "); Serial.println(relativeAltitude);
 
   // === Combine Orientation + Velocity into Control ===
-  //Change the "-" signs before "(Kp" if fins are doing the opposite 
+  //Change the "-" signs before "(Kp" if fins are doing the opposite
   int correctionPitch = constrain((Kp * adjustedPitch + Kv * velocity), -45, 45);
   int correctionRoll = constrain((Kp * adjustedRoll),  -45, 45);
-  int correctionYaw = constrain((Kp * adjustedYaw), -45, 45); 
+  int correctionYaw = constrain((Kp * adjustedYaw), -45, 45);
 
   //Sets each servo based on correction value. Neutral = 90°, deflections add or subtract
   //(Place fin as straight:pushes fin one way or the other:sets range for servo for safety)
-  int s1 = constrain(80 - correctionPitch - correctionRoll - correctionYaw, 45, 135);
-  int s2 = constrain(98 + correctionPitch - correctionRoll + correctionYaw, 45, 135);
-  int s3 = constrain(87 - correctionPitch - correctionRoll + correctionYaw, 45, 135);
-  int s4 = constrain(85 + correctionPitch - correctionRoll - correctionYaw, 45, 135);
-  
+  s1 = constrain(80 - correctionPitch - correctionRoll - correctionYaw, 45, 135);
+  s2 = constrain(98 + correctionPitch - correctionRoll + correctionYaw, 45, 135);
+  s3 = constrain(87 - correctionPitch - correctionRoll + correctionYaw, 45, 135);
+  s4 = constrain(85 + correctionPitch - correctionRoll - correctionYaw, 45, 135);
+
   //pairing servos, moving in opposite directions to create pitch/roll forces
   servo1.write(s1);
   servo2.write(s2);

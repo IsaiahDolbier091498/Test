@@ -2,6 +2,6 @@
 #define SDWRITER_H
 
 void initSDCard();
-void SDCardWrite();
+void SDCardWrite(unsigned long timeStamp);
 
 #endif
