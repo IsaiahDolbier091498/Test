@@ -25,6 +25,13 @@ float Kv = 0.5; //Gain for adding vertical velocity (climb rate) influence into 
 
 Servo servo1, servo2, servo3, servo4; //Create servo objects
 
+int s1, s2, s3, s4;
+
+float adjustedPitch, adjustedRoll, adjustedYaw;
+
+float deadband = 0.5;
+
+float norm;
 
 //Attaching servos to pins
 void initServos() {
@@ -52,6 +59,16 @@ void updateIMUandServos() {
   float q1 = sensorValue.un.gameRotationVector.i;
   float q2 = sensorValue.un.gameRotationVector.j;
   float q3 = sensorValue.un.gameRotationVector.k;
+
+  // Prevents float precision drift over time (maybe)
+  norm = sqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
+  if (abs(norm - 1.0f) > 0.01f)
+  {
+  q0 /= norm;
+  q1 /= norm;
+  q2 /= norm;
+  q3 /= norm;
+  }
 
   Quaternion q_current = {q0, q1, q2, q3};
 
@@ -90,9 +107,9 @@ void updateIMUandServos() {
   yaw   *= 180.0 / PI;
 
   //Axis orientation
-  float adjustedPitch = pitch;
-  float adjustedRoll  = roll;
-  float adjustedYaw   = yaw;
+  adjustedPitch = pitch;
+  adjustedRoll  = roll;
+  adjustedYaw   = yaw;
 
   //Sends data over serial
   Serial.print("Pitch: "); Serial.print(adjustedPitch);
@@ -101,19 +118,23 @@ void updateIMUandServos() {
   Serial.print(" | Vel: "); Serial.print(velocity);
   Serial.print(" | Alt: "); Serial.println(relativeAltitude);
 
+  if (abs(adjustedPitch) < deadband) adjustedPitch = 0;
+  if (abs(adjustedRoll) < deadband) adjustedRoll = 0;
+  if (abs(adjustedYaw) < deadband) adjustedYaw = 0;
+
   // === Combine Orientation + Velocity into Control ===
-  //Change the "-" signs before "(Kp" if fins are doing the opposite 
+  //Change the "-" signs before "(Kp" if fins are doing the opposite
   int correctionPitch = constrain((Kp * adjustedPitch + Kv * velocity), -45, 45);
   int correctionRoll = constrain((Kp * adjustedRoll),  -45, 45);
-  int correctionYaw = constrain((Kp * adjustedYaw), -45, 45); 
+  int correctionYaw = constrain((Kp * adjustedYaw), -45, 45);
 
   //Sets each servo based on correction value. Neutral = 90°, deflections add or subtract
   //(Place fin as straight:pushes fin one way or the other:sets range for servo for safety)
-  int s1 = constrain(80 - correctionPitch - correctionRoll - correctionYaw, 45, 135);
-  int s2 = constrain(98 + correctionPitch - correctionRoll + correctionYaw, 45, 135);
-  int s3 = constrain(87 - correctionPitch - correctionRoll + correctionYaw, 45, 135);
-  int s4 = constrain(85 + correctionPitch - correctionRoll - correctionYaw, 45, 135);
-  
+  s1 = constrain(80 - correctionPitch - correctionRoll - correctionYaw, 45, 135);
+  s2 = constrain(98 + correctionPitch - correctionRoll + correctionYaw, 45, 135);
+  s3 = constrain(87 - correctionPitch - correctionRoll + correctionYaw, 45, 135);
+  s4 = constrain(85 + correctionPitch - correctionRoll - correctionYaw, 45, 135);
+
   //pairing servos, moving in opposite directions to create pitch/roll forces
   servo1.write(s1);
   servo2.write(s2);
