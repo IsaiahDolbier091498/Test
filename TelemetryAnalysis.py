@@ -1,0 +1,173 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from matplotlib.animation import FuncAnimation
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.spatial.transform import Rotation as R
+from math import radians, sin, cos
+
+# Loads in Telemetry file
+telemetryData = pd.read_csv('Telemetry.csv')
+
+frames = len(telemetryData) # Note that the animation only seems to run on real time if the Telemetry is updated every 50 ms or more in the csv file.
+#Faster updates will slow the animation down
+
+# Turns each column of the csv file into separate lists
+altitudeData = telemetryData['Altitude (m)']
+velocityData = telemetryData['Velocity (m/s)']
+rollData = telemetryData['Roll (deg)']
+pitchData = telemetryData['Pitch (deg)']
+yawData = telemetryData['Yaw (deg)']
+servo1Data = telemetryData['Servo1 (deg)']
+servo2Data = telemetryData['Servo2 (deg)']
+servo3Data = telemetryData['Servo3 (deg)']
+servo4Data = telemetryData['Servo4 (deg)']
+timestampData = telemetryData['Timestamp (milliseconds)']
+
+# 3D setup
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.set_xlim([-1, 1])
+ax.set_ylim([-1, 1])
+ax.set_zlim([0, 3])
+ax.set_box_aspect([1, 1, 2])
+ax.axis('off')
+fig.patch.set_facecolor('#F0F0F0')
+ax.set_facecolor('#F0F0F0')
+ax.view_init(azim=-60)
+
+# Telemetry text placeholders. Will be refreshed after the first frame
+altitudeText = fig.text(0.70, 0.8, f'Altitude: {altitudeData[0]:.3f}', fontsize=12, color='black')
+velocityText = fig.text(0.70, 0.74, f'Velocity: {velocityData[0]:.3f}', fontsize=12, color='black')
+rollText = fig.text(0.70, 0.68, f'Roll: {rollData[0]:.3f}', fontsize=12, color='black')
+pitchText = fig.text(0.70, 0.62, f'Pitch: {pitchData[0]:.3f}', fontsize=12, color='black')
+yawText = fig.text(0.70, 0.56, f'Yaw: {yawData[0]:.3f}', fontsize=12, color='black')
+servo1Text = fig.text(0.70, 0.50, f'Servo1: {servo1Data[0]:.3f}', fontsize=12, color='black')
+servo2Text = fig.text(0.70, 0.44, f'Servo2: {servo2Data[0]:.3f}', fontsize=12, color='black')
+servo3Text = fig.text(0.70, 0.38, f'Servo3: {servo3Data[0]:.3f}', fontsize=12, color='black')
+servo4Text = fig.text(0.70, 0.32, f'Servo4: {servo4Data[0]:.3f}', fontsize=12, color='black')
+timestampText = fig.text(0.02, 0.95, f'Time: {timestampData[0]:.3f}', fontsize=12, color='black')
+
+
+# Returns coordinates to construct the rocket's body
+def createCylinder(r=0.2, h=2.0, res=30):
+    t = np.linspace(0, 2*np.pi, res)
+    z = np.linspace(0, h, 2)
+    T, Z = np.meshgrid(t, z)
+    return r*np.cos(T), r*np.sin(T), Z
+
+# returns coordinates to construct the rocket's nosecone (ogive shaped)
+def createOgive(radius=0.2, height=0.5, res=30):
+    zp = np.linspace(0, height, res)
+    R0 = (radius**2 + height**2)/(2*radius)
+    xp = np.sqrt(R0**2 - (height-zp)**2) - (R0-radius)
+    theta, Z = np.meshgrid(np.linspace(0,2*np.pi,res), zp)
+    X = xp[:,None]*np.cos(theta)
+    Y = xp[:,None]*np.sin(theta)
+    return X, Y, height+2.0 - Z
+
+# returns coordinates to construct the rocket's bottom fins
+def createBottomFins(bw=0.24, tw=0.24, h=0.35):
+    x = np.array([[0,0],[bw,tw]])
+    y = np.zeros_like(x)
+    z = np.array([[0,h],[0.1,h-0.1]])
+    return x, y, z
+
+# returns coordinates to construct the rocket's top fins
+def createTopFins(bw=0.14, tw=0.14, h=0.25):
+    x = np.array([[0,0],[bw,tw]])
+    y = np.zeros_like(x)
+    z = np.array([[0,h],[0.1,h-0.1]]) + 1.6
+    return x, y, z
+
+# Rotates 3d points given pitch (x-axis), roll (y-axis), and yaw (z-axis)
+def rotatePoints(x, y, z, pitch, roll, yaw):
+    pts = np.vstack((x.ravel(), y.ravel(), z.ravel())).T
+    rot = R.from_euler('zyx', [roll, pitch, yaw], degrees=True)
+    new = rot.apply(pts)
+    return (new[:,0].reshape(x.shape),
+            new[:,1].reshape(y.shape),
+            new[:,2].reshape(z.shape))
+
+# Generate the 3D coordinates for the rocket's components
+bodyX, bodyY, bodyZ = createCylinder()
+ogiveX, ogiveY, ogiveZ = createOgive()
+bFx, bFy, bFz = createBottomFins()
+tFx, tFy, tFz = createTopFins()
+
+# Placeholder surfaces for each body
+bodySurf = None
+ogiveSurf = None
+bFinSurfs = []
+tFinSurfs = []
+
+# Updates every frame
+def update(i):
+
+    #if i % 10 != 0:  # Skip every 10th frame (i.e., update every 10 ms)
+    #    return
+
+    # Sets texts to list each frame's value
+    altitudeText.set_text(f'Altitude: {altitudeData[i]:.3f} (m)')
+    velocityText.set_text(f'Velocity: {velocityData[i]:.3f} (m/s)')
+    rollText.set_text(f'Roll: {rollData[i]:.3f} (°)')
+    pitchText.set_text(f'Pitch: {pitchData[i]:.3f} (°)')
+    yawText.set_text(f'Yaw: {yawData[i]:.3f} (°)')
+    servo1Text.set_text(f'Servo1: {servo1Data[i]:.3f} (°)')
+    servo2Text.set_text(f'Servo2: {servo2Data[i]:.3f} (°)')
+    servo3Text.set_text(f'Servo3: {servo3Data[i]:.3f} (°)')
+    servo4Text.set_text(f'Servo4: {servo4Data[i]:.3f} (°)')
+    timestampText.set_text(f'Time: {timestampData[i]:.3f} (ms) {timestampData[i]//1000} (s)')
+
+    global bodySurf, ogiveSurf, bFinSurfs, tFinSurfs
+
+    # Removes old surfaces
+    if bodySurf: bodySurf.remove()
+    if ogiveSurf: ogiveSurf.remove()
+    for s in bFinSurfs: s.remove()
+    for s in tFinSurfs: s.remove()
+    bFinSurfs.clear()
+    tFinSurfs.clear()
+
+    # Gets pitch, roll, yaw values from the current frame
+    p, r, yw = pitchData[i], rollData[i], yawData[i]
+
+    # Draws the rocket's body
+    bx, by, bz = rotatePoints(bodyX, bodyY, bodyZ, p, r, yw)
+    bodySurf = ax.plot_surface(bx, by, bz, color='yellow', alpha=0.6)
+
+    # Draws the rocket's nosecone
+    ox, oy, oz = rotatePoints(ogiveX, ogiveY, ogiveZ, p, r, yw)
+    ogiveSurf = ax.plot_surface(ox, oy, oz, color='black', alpha=0.8)
+
+    # Positions and rotates each of the four bottom fins. Applies pitch, roll, and yaw values, then draws them.
+    for ang in [0,90,180,270]:
+        rad = radians(ang)
+        x = bFx.copy(); y = bFy.copy(); z = bFz.copy()
+        x2 = x*cos(rad) - y*sin(rad)
+        y2 = x*sin(rad) + y*cos(rad)
+        x2 += (0.205)*cos(rad); y2 += (0.205)*sin(rad)
+        fx, fy, fz = rotatePoints(x2, y2, z, p, r, yw)
+        bFinSurfs.append(ax.plot_surface(fx, fy, fz, color='purple', zorder=5))
+
+    # Positions and rotates each of the four top fins. Each fin is driven by their own servo data and their rotation is centered around a pivot.
+    # Applies pitch, roll, and yaw values, then draws them.
+    servos = [servo1Data[i], servo2Data[i], servo3Data[i], servo4Data[i]]
+    for baseAng, servoAng in zip([0,90,180,270], servos):
+        pts = np.vstack((tFx.ravel(), tFy.ravel(), tFz.ravel())).T
+        pivot = pts[[2, 3], :].mean(axis=0)
+        pts -= pivot
+        pts = R.from_euler('x', servoAng, degrees=True).apply(pts)
+        pts += pivot
+        pts = R.from_euler('z', baseAng, degrees=True).apply(pts)
+        x2 = pts[:,0].reshape(tFx.shape)
+        y2 = pts[:,1].reshape(tFy.shape)
+        z2 = pts[:,2].reshape(tFz.shape)
+        off = 0.205; rad = radians(baseAng)
+        x2 += off*cos(rad); y2 += off*sin(rad)
+        fx, fy, fz = rotatePoints(x2, y2, z2, p, r, yw)
+        tFinSurfs.append(ax.plot_surface(fx, fy, fz, color='red', zorder=5))
+
+# Animation
+ani = FuncAnimation(fig, update, frames=frames, interval=1, blit=False)
+plt.show()
