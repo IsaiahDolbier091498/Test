@@ -1,30 +1,41 @@
 #include <Arduino.h>
 #include "sensors.h"
 #include "control.h"
-#include <SD.h>
-File dataFile;
+#include "SDWriter.h"
 
-//Calls initialization routines(initSensors, initServos) during setup()
+unsigned long lastLogTime = 0;
+const unsigned long logInterval = 20;
+
+int GreenLedPin = 13;
+
+
+//Calls initialization routines(initSensors, initServos, ) during setup()
 //Repeatedly updates sensors and control surfaces in loop()
 void setup() {
   Serial.begin(115200);
 
-  if (!SD.begin(BUILTIN_SDCARD)) {
-    Serial.println("SD card initialization failed!");
-  } else {
-    Serial.println("SD card ready.");
-    dataFile = SD.open("datalog.txt", FILE_WRITE);
-    if (dataFile) {
-      dataFile.println("Time, Pitch, Roll, Yaw, Velocity, Altitude");
-      dataFile.close();
-    }
-  }
   initSensors();
   initServos();
+  initSDCard();
+  pinMode(GreenLedPin, OUTPUT);
   Serial.println("System ready.");
+  for (int i = 0; i < 100; i++)
+  {
+    updateAltitude();
+    updateIMUandServos();
+  }
+  digitalWrite(GreenLedPin, HIGH);
 }
 
 void loop() {
   updateAltitude();
   updateIMUandServos();
+
+  unsigned long now = millis();
+  if (now - lastLogTime >= logInterval)
+  {
+    SDCardWrite(now);
+    lastLogTime = now;
+  }
+
 }
