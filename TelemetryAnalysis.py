@@ -134,11 +134,11 @@ def update(i):
 
     # Draws the rocket's body
     bx, by, bz = rotatePoints(bodyX, bodyY, bodyZ, p, r, yw)
-    bodySurf = ax.plot_surface(bx, by, bz, color='black', alpha=0.6)
+    bodySurf = ax.plot_surface(bx, by, bz, color='yellow', alpha=0.6)
 
     # Draws the rocket's nosecone
     ox, oy, oz = rotatePoints(ogiveX, ogiveY, ogiveZ, p, r, yw)
-    ogiveSurf = ax.plot_surface(ox, oy, oz, color='green', alpha=0.8)
+    ogiveSurf = ax.plot_surface(ox, oy, oz, color='black', alpha=0.8)
 
     # Positions and rotates each of the four bottom fins. Applies pitch, roll, and yaw values, then draws them.
     for ang in [0,90,180,270]:
@@ -148,7 +148,7 @@ def update(i):
         y2 = x*sin(rad) + y*cos(rad)
         x2 += (0.205)*cos(rad); y2 += (0.205)*sin(rad)
         fx, fy, fz = rotatePoints(x2, y2, z, p, r, yw)
-        bFinSurfs.append(ax.plot_surface(fx, fy, fz, color='blue', zorder=5))
+        bFinSurfs.append(ax.plot_surface(fx, fy, fz, color='purple', zorder=5))
 
     # Positions and rotates each of the four top fins. Each fin is driven by their own servo data and their rotation is centered around a pivot.
     # Applies pitch, roll, and yaw values, then draws them.

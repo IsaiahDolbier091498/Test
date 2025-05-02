@@ -5,6 +5,7 @@
 
 unsigned long lastLogTime = 0;
 const unsigned long logInterval = 20;
+int BlueLedPin = 12;
 
 
 //Calls initialization routines(initSensors, initServos, ) during setup()
@@ -14,6 +15,8 @@ void setup() {
   initSensors();
   initServos();
   initSDCard();
+  pinMode(BlueLedPin, OUTPUT);
+  digitalWrite(BlueLedPin, HIGH);
   Serial.println("System ready.");
 }
 
