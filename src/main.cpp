@@ -16,8 +16,13 @@ void setup() {
   initServos();
   initSDCard();
   pinMode(BlueLedPin, OUTPUT);
-  digitalWrite(BlueLedPin, HIGH);
   Serial.println("System ready.");
+  for (int i = 0; i < 100; i++)
+  {
+    updateAltitude();
+    updateIMUandServos();
+  }
+  digitalWrite(BlueLedPin, HIGH);
 }
 
 void loop() {
