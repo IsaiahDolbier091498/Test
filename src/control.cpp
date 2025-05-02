@@ -26,12 +26,14 @@ float Kv = 0.5; //Gain for adding vertical velocity (climb rate) influence into 
 Servo servo1, servo2, servo3, servo4; //Create servo objects
 
 
+
 //Attaching servos to pins
 void initServos() {
   servo1.attach(2);
   servo2.attach(3);
   servo3.attach(4);
   servo4.attach(5);
+
 
   //Initializing the IMU over I2C, if it fails the program stops
   if (!bno08x.begin_I2C()) {
