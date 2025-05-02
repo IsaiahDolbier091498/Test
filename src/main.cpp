@@ -19,7 +19,7 @@ void setup() {
   initSDCard();
   pinMode(GreenLedPin, OUTPUT);
   Serial.println("System ready.");
-  for (int i = 0; i < 100; i++)
+  for (int i = 0; i < 200; i++)
   {
     updateAltitude();
     updateIMUandServos();
