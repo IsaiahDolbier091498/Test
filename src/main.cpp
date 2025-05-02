@@ -5,7 +5,8 @@
 
 unsigned long lastLogTime = 0;
 const unsigned long logInterval = 20;
-int BlueLedPin = 12;
+
+int GreenLedPin = 13;
 
 
 //Calls initialization routines(initSensors, initServos, ) during setup()
@@ -15,14 +16,14 @@ void setup() {
   initSensors();
   initServos();
   initSDCard();
-  pinMode(BlueLedPin, OUTPUT);
+  pinMode(GreenLedPin, OUTPUT);
   Serial.println("System ready.");
   for (int i = 0; i < 100; i++)
   {
     updateAltitude();
     updateIMUandServos();
   }
-  digitalWrite(BlueLedPin, HIGH);
+  digitalWrite(GreenLedPin, HIGH);
 }
 
 void loop() {
