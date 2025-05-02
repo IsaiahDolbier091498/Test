@@ -20,6 +20,11 @@ void initSDCard()
         while (1);
     }
 
+    if (SD.exists("Telemetry.csv"))
+    {
+        SD.remove("Telemetry.csv");
+    }
+
     Serial.println("initialization complete");
 }
 
