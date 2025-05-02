@@ -42,6 +42,6 @@ void SDCardWrite(unsigned long timeStamp)
     }
     else
     {
-        Serial.println("error opening Telemetry.txt");
+        Serial.println("error opening Telemetry.csv");
     }
 }

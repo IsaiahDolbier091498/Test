@@ -35,10 +35,10 @@ float norm;
 
 //Attaching servos to pins
 void initServos() {
-  servo1.attach(2);
-  servo2.attach(3);
-  servo3.attach(4);
-  servo4.attach(5);
+  servo1.attach(6);
+  servo2.attach(7);
+  servo3.attach(8);
+  servo4.attach(9);
 
   //Initializing the IMU over I2C, if it fails the program stops
   if (!bno08x.begin_I2C()) {
