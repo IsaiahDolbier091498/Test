@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial.transform import Rotation as R
 from math import radians, sin, cos
@@ -9,8 +9,7 @@ from math import radians, sin, cos
 # Loads in Telemetry file
 telemetryData = pd.read_csv('Telemetry.csv')
 
-frames = len(telemetryData) # Note that the animation only seems to run on real time if the Telemetry is updated every 50 ms or more in the csv file.
-#Faster updates will slow the animation down
+frames = len(telemetryData)
 
 # Turns each column of the csv file into separate lists
 altitudeData = telemetryData['Altitude (m)']
@@ -25,7 +24,7 @@ servo4Data = telemetryData['Servo4 (deg)']
 timestampData = telemetryData['Timestamp (milliseconds)']
 
 # 3D setup
-fig = plt.figure()
+fig = plt.figure(figsize=(15.5, 10))
 ax = fig.add_subplot(111, projection='3d')
 ax.set_xlim([-0.2, 0.2])
 ax.set_ylim([-0.2, 0.2])
@@ -40,7 +39,7 @@ translateX = -0.5
 translateY = 0
 translateZ = 0
 
-# Telemetry text placeholders. Will be refreshed after the first frame
+# Telemetry text placeholders
 altitudeText = fig.text(0.80, 0.9, f'Altitude: {altitudeData[0]:.3f}', fontsize=20, color='black')
 velocityText = fig.text(0.80, 0.81, f'Velocity: {velocityData[0]:.3f}', fontsize=20, color='black')
 rollText = fig.text(0.80, 0.72, f'Roll: {rollData[0]:.3f}', fontsize=20, color='black')
@@ -52,16 +51,15 @@ servo3Text = fig.text(0.80, 0.27, f'Servo3: {servo3Data[0]:.3f}', fontsize=20, c
 servo4Text = fig.text(0.80, 0.18, f'Servo4: {servo4Data[0]:.3f}', fontsize=20, color='black')
 timestampText = fig.text(0.02, 0.95, f'Time: {timestampData[0]:.3f}', fontsize=20, color='black')
 
-
 # Returns coordinates to construct the rocket's body
-def createCylinder(r=0.2, h=2.0, res=30):
+def createCylinder(r=0.15, h=2.0, res=30):
     t = np.linspace(0, 2*np.pi, res)
     z = np.linspace(0, h, 2)
     T, Z = np.meshgrid(t, z)
     return r*np.cos(T), r*np.sin(T), Z
 
 # returns coordinates to construct the rocket's nosecone (ogive shaped)
-def createOgive(radius=0.2, height=0.5, res=30):
+def createOgive(radius=0.15, height=0.6, res=30):
     zp = np.linspace(0, height, res)
     R0 = (radius**2 + height**2)/(2*radius)
     xp = np.sqrt(R0**2 - (height-zp)**2) - (R0-radius)
@@ -72,16 +70,16 @@ def createOgive(radius=0.2, height=0.5, res=30):
 
 # returns coordinates to construct the rocket's bottom fins
 def createBottomFins(bw=0.24, tw=0.24, h=0.35):
-    x = np.array([[0,0],[bw,tw]])
+    x = np.array([[0,0],[bw,tw]]) - 0.055
     y = np.zeros_like(x)
     z = np.array([[0,h],[0.1,h-0.1]])
     return x, y, z
 
 # returns coordinates to construct the rocket's top fins
 def createTopFins(bw=0.14, tw=0.14, h=0.25):
-    x = np.array([[0,0],[bw,tw]])
+    x = np.array([[0,0],[bw,tw]]) - 0.055
     y = np.zeros_like(x)
-    z = np.array([[0,h],[0.1,h-0.1]]) + 1.6
+    z = np.array([[0,h],[0.1,h-0.1]]) + 1.85
     return x, y, z
 
 # Rotates 3d points given pitch (x-axis), roll (y-axis), and yaw (z-axis)
@@ -107,25 +105,19 @@ tFinSurfs = []
 
 # Updates every frame
 def update(i):
-
-    #if i % 10 != 0:  # Skip every 10th frame (i.e., update every 10 ms)
-    #    return
-
-    # Sets texts to list each frame's value
     altitudeText.set_text(f'Altitude: {altitudeData[i]:.3f} (m)')
     velocityText.set_text(f'Velocity: {velocityData[i]:.3f} (m/s)')
     rollText.set_text(f'Roll: {rollData[i]:.3f} (°)')
     pitchText.set_text(f'Pitch: {pitchData[i]:.3f} (°)')
     yawText.set_text(f'Yaw: {yawData[i]:.3f} (°)')
-    servo1Text.set_text(f'Servo1: {80 - servo1Data[i]:.3f} (°)')
+    servo1Text.set_text(f'Servo1: {79 - servo1Data[i]:.3f} (°)')
     servo2Text.set_text(f'Servo2: {98 - servo2Data[i]:.3f} (°)')
-    servo3Text.set_text(f'Servo3: {87 - servo3Data[i]:.3f} (°)')
-    servo4Text.set_text(f'Servo4: {85 - servo4Data[i]:.3f} (°)')
+    servo3Text.set_text(f'Servo3: {88 - servo3Data[i]:.3f} (°)')
+    servo4Text.set_text(f'Servo4: {86 - servo4Data[i]:.3f} (°)')
     timestampText.set_text(f'Time: {timestampData[i]:.3f} (ms) {timestampData[i]//1000} (s)')
 
     global bodySurf, ogiveSurf, bFinSurfs, tFinSurfs
 
-    # Removes old surfaces
     if bodySurf: bodySurf.remove()
     if ogiveSurf: ogiveSurf.remove()
     for s in bFinSurfs: s.remove()
@@ -133,25 +125,21 @@ def update(i):
     bFinSurfs.clear()
     tFinSurfs.clear()
 
-    # Gets pitch, roll, yaw values from the current frame
     p, r, yw = pitchData[i], rollData[i], yawData[i]
 
-    # Draws the rocket's body
     bx, by, bz = rotatePoints(bodyX, bodyY, bodyZ, p, r, yw)
     bx += translateX
     by += translateY
     bz += translateZ
     bodySurf = ax.plot_surface(bx, by, bz, color='yellow', alpha=0.6)
 
-    # Draws the rocket's nosecone
     ox, oy, oz = rotatePoints(ogiveX, ogiveY, ogiveZ, p, r, yw)
     ox += translateX
     oy += translateY
     oz += translateZ
     ogiveSurf = ax.plot_surface(ox, oy, oz, color='black', alpha=0.8)
 
-    # Positions and rotates each of the four bottom fins. Applies pitch, roll, and yaw values, then draws them.
-    for ang in [0,90,180,270]:
+    for ang in [45,135,225,315]:
         rad = radians(ang)
         x = bFx.copy(); y = bFy.copy(); z = bFz.copy()
         x2 = x*cos(rad) - y*sin(rad)
@@ -160,9 +148,7 @@ def update(i):
         fx, fy, fz = rotatePoints(x2, y2, z, p, r, yw)
         bFinSurfs.append(ax.plot_surface(fx + translateX, fy + translateY, fz + translateZ, color='black', zorder=5))
 
-    # Positions and rotates each of the four top fins. Each fin is driven by their own servo data and their rotation is centered around a pivot.
-    # Applies pitch, roll, and yaw values, then draws them.
-    servos = [80 - servo1Data[i],98 - servo2Data[i],87 - servo3Data[i],85 - servo4Data[i]]
+    servos = [79 - servo1Data[i],98 - servo2Data[i],88 - servo3Data[i],86 - servo4Data[i]]
     for baseAng, servoAng in zip([0,90,180,270], servos):
         pts = np.vstack((tFx.ravel(), tFy.ravel(), tFz.ravel())).T
         pivot = pts[[2, 3], :].mean(axis=0)
@@ -178,6 +164,16 @@ def update(i):
         fx, fy, fz = rotatePoints(x2, y2, z2, p, r, yw)
         tFinSurfs.append(ax.plot_surface(fx + translateX, fy + translateY, fz + translateZ, color='red', zorder=5))
 
+# Writer setup
+
+avgTimestamp = np.mean(np.diff(timestampData))
+avgFps = 1000 / avgTimestamp
+print(avgFps)
+
+writer = FFMpegWriter(fps=avgFps)  # Adjust fps to match the real-time rate based on telemetry update intervals
+
 # Animation
 ani = FuncAnimation(fig, update, frames=frames, interval=1, blit=False)
-plt.show()
+
+# Save the animation
+ani.save('flight_animation.mp4', writer=writer, dpi=200)
