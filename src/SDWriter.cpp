@@ -20,6 +20,7 @@ void initSDCard()
         while (1);
     }
 
+    // REMOVE BEFORE LAUNCH
     if (SD.exists("Telemetry.csv"))
     {
         SD.remove("Telemetry.csv");
