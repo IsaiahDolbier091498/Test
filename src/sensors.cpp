@@ -65,7 +65,7 @@ void updateAltitude() {
 
 
   //After 100 good samples, we lock in a baseline for referenced altitude
-  if (!initialAltitudeSet && filterCount >= 100) {
+  if (!initialAltitudeSet && filterCount >= 1000) {
     initialAltitude = filteredAltitude;
     initialAltitudeSet = true;
     Serial.println("Initial altitude set.");

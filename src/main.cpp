@@ -14,18 +14,18 @@ unsigned long initTimeTaken;
 //Repeatedly updates sensors and control surfaces in loop()
 void setup() {
   Serial.begin(115200);
-  delay(60000);
+  delay(0); // 60,000 ms
   initSensors();
   initServos();
   initSDCard();
-  pinMode(GreenLedPin, OUTPUT);
   Serial.println("System ready.");
-  for (int i = 0; i < 200; i++)
+  pinMode(GreenLedPin, OUTPUT);
+  for (int i = 0; i < 1000; i++)
   {
     updateAltitude();
     updateIMUandServos();
   }
-
+  
   digitalWrite(GreenLedPin, HIGH);
   initTimeTaken = millis();
 }
