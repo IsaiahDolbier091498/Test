@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "SDWriter.h"
-#include "sensors.h"
+#include "altimeter.h"
 #include "control.h"
 #include <SPI.h>
 #include <SD.h>
@@ -9,24 +9,26 @@
 // If your SD card is larger than 32 GB or formatted as exFAT, it may not work correctly.
 // Use an SD card formatter tool to reformat the card to FAT32 if you encounter issues.
 
+unsigned long lastLogTime = 0;
+
 // Initializes the SD card. Holds in an indefinite loop if the Initialization fails
 void initSDCard()
 {
-    Serial.print("Initializing SD card...");
+    Serial.println("Initializing SD card...");
 
     if (!SD.begin(BUILTIN_SDCARD)) // If BUILTIN_SDCARD doesn't work try replacing it with 4 (  if (!SD.begin(4))  )
     {
-        Serial.println("initialization failed!");
+        Serial.println("Insert/check SD card");
         while (1);
     }
 
-    // REMOVE BEFORE LAUNCH
-    if (SD.exists("Telemetry.csv"))
-    {
-        SD.remove("Telemetry.csv");
-    }
+    // Clears old telemetry file
+    // if (SD.exists("Telemetry.csv"))
+    // {
+    //     SD.remove("Telemetry.csv");
+    // }
 
-    Serial.println("initialization complete");
+    Serial.println("SD card initialization complete");
 }
 
 // Main function that writes to the SD card. Uses commas as delimiter
@@ -49,5 +51,15 @@ void SDCardWrite(unsigned long timeStamp)
     else
     {
         Serial.println("error opening Telemetry.csv");
+    }
+}
+
+void logTelemetry(unsigned long ms, unsigned long initTimeTaken, unsigned long interval)
+{
+    unsigned long now = ms - initTimeTaken;
+    if (now - lastLogTime >= interval)
+    {
+    SDCardWrite(now);
+    lastLogTime = now;
     }
 }

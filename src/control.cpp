@@ -1,5 +1,5 @@
 #include "control.h"
-#include "sensors.h"
+#include "altimeter.h"
 #include <Adafruit_BNO08x.h>
 #include <Servo.h>
 #include <math.h>
@@ -15,6 +15,7 @@ struct Quaternion {
 };
 
 Quaternion q_initial = {1, 0, 0, 0};
+bool isZeroed = false;
 bool isCalibrated = false;
 
 // --- Control Gain ---
@@ -75,9 +76,9 @@ void updateIMUandServos() {
 
   Quaternion q_current = {q0, q1, q2, q3};
 
-  if (!isCalibrated) {
+  if (!isZeroed) {
     q_initial = q_current;
-    isCalibrated = true;
+    isZeroed = true;
     Serial.println("IMU orientation zeroed.");
     return;
   }
@@ -135,18 +136,28 @@ void updateIMUandServos() {
   // s3 = (88);
   // s4 = (86);
 
-
-
-
   servo1.write(s1);
   servo2.write(s2);
   servo3.write(s3);
   servo4.write(s4);
 
-  // Serial debugging
+  // Serial debugging -- comment out before launch
+  if (isCalibrated == true)
+  {
   Serial.print("Pitch: "); Serial.print(filteredPitch);
   Serial.print(" | Roll: "); Serial.print(filteredRoll);
   Serial.print(" | Yaw: "); Serial.print(filteredYaw);
   Serial.print(" | Vel: "); Serial.print(velocity);
   Serial.print(" | Alt: "); Serial.println(relativeAltitude);
+  }
+}
+
+void calibrateIMU(int sampleAmount)
+{
+  for (int i = 0; i < sampleAmount; i++)
+  {
+    updateIMUandServos();
+    delay(5);
+  }
+  isCalibrated = true;
 }

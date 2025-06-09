@@ -10,5 +10,6 @@ extern float relativeAltitude;
 
 void initSensors();
 void updateAltitude();
+void calibrateAltimeter(int sampleAmount);
 
 #endif
