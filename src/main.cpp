@@ -1,44 +1,39 @@
 #include <Arduino.h>
-#include "sensors.h"
+#include "altimeter.h"
 #include "control.h"
 #include "SDWriter.h"
 
-unsigned long lastLogTime = 0;
-const unsigned long logInterval = 20;
+const unsigned long logInterval = 40;
 
 int GreenLedPin = 13;
 
 unsigned long initTimeTaken;
 
-//Calls initialization routines(initSensors, initServos, ) during setup()
-//Repeatedly updates sensors and control surfaces in loop()
+// Initializes and calibrates the components during setup()
 void setup() {
   Serial.begin(115200);
-  delay(60000);
+  delay(3000); // 60,000 ms set to allow nosecone installation before program runs
+  Serial.println("Initializing components...");
   initSensors();
   initServos();
   initSDCard();
-  pinMode(GreenLedPin, OUTPUT);
-  Serial.println("System ready.");
-  for (int i = 0; i < 200; i++)
-  {
-    updateAltitude();
-    updateIMUandServos();
-  }
+  Serial.println("Components initialized");
 
+  pinMode(GreenLedPin, OUTPUT);
+
+  Serial.println("Waiting on sensor calibration...");
+  calibrateAltimeter(1000); // Sample amount
+  calibrateIMU(1000); // Sample amount
+
+  Serial.println("System ready");
   digitalWrite(GreenLedPin, HIGH);
   initTimeTaken = millis();
 }
 
-void loop() {
+//Repeatedly updates sensors and control surfaces in loop()
+void loop() 
+{
   updateAltitude();
   updateIMUandServos();
-
-  unsigned long now = millis() - initTimeTaken;
-  if (now - lastLogTime >= logInterval)
-  {
-    SDCardWrite(now);
-    lastLogTime = now;
-  }
-
+  //logTelemetry(millis(), initTimeTaken, logInterval);
 }

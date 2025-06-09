@@ -4,6 +4,8 @@
 
 void initServos();
 void updateIMUandServos();
+void calibrateIMU(int sampleAmount);
+void printData();
 
 extern float adjustedPitch;
 extern float adjustedRoll;
