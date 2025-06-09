@@ -6,6 +6,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial.transform import Rotation as R
 from math import radians, sin, cos
 
+# Use ffmpeg build from 4-30-2024
+
 # Loads in Telemetry file
 telemetryData = pd.read_csv('Telemetry.csv')
 
