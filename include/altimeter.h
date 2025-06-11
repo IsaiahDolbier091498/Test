@@ -1,5 +1,5 @@
-#ifndef SENSORS_H
-#define SENSORS_H
+#ifndef ALTIMETER_H
+#define ALTIMETER_H
 //Exports sensor functions and shared data
 
 

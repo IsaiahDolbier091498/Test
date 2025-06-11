@@ -2,6 +2,8 @@
 #include "altimeter.h"
 #include "control.h"
 #include "SDWriter.h"
+#include "avionicsCommands.h"
+#include "GNSS.h"
 
 const unsigned long logInterval = 40;
 
@@ -14,16 +16,17 @@ void setup() {
   Serial.begin(115200);
   delay(3000); // 60,000 ms set to allow nosecone installation before program runs
   Serial.println("Initializing components...");
-  initSensors();
-  initServos();
-  initSDCard();
+  //initSensors();
+  //initServos();
+  //initSDCard();
+  initGnss();
   Serial.println("Components initialized");
 
   pinMode(GreenLedPin, OUTPUT);
 
   Serial.println("Waiting on sensor calibration...");
-  calibrateAltimeter(1000); // Sample amount
-  calibrateIMU(1000); // Sample amount
+  //calibrateAltimeter(1000); // Sample amount
+  //calibrateIMU(1000); // Sample amount
 
   Serial.println("System ready");
   digitalWrite(GreenLedPin, HIGH);
@@ -33,7 +36,8 @@ void setup() {
 //Repeatedly updates sensors and control surfaces in loop()
 void loop() 
 {
-  updateAltitude();
-  updateIMUandServos();
+  getGnssCoords();
+  //updateAltitude();
+  //updateIMUandServos();
   //logTelemetry(millis(), initTimeTaken, logInterval);
 }

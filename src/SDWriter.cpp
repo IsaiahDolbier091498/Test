@@ -10,6 +10,7 @@
 // Use an SD card formatter tool to reformat the card to FAT32 if you encounter issues.
 
 unsigned long lastLogTime = 0;
+extern volatile bool loggingEnabled; 
 
 // Initializes the SD card. Holds in an indefinite loop if the Initialization fails
 void initSDCard()
@@ -56,6 +57,9 @@ void SDCardWrite(unsigned long timeStamp)
 
 void logTelemetry(unsigned long ms, unsigned long initTimeTaken, unsigned long interval)
 {
+
+    if(!loggingEnabled) return;
+
     unsigned long now = ms - initTimeTaken;
     if (now - lastLogTime >= interval)
     {
