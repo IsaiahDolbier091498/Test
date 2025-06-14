@@ -20,6 +20,7 @@ void setup() {
   //initServos();
   //initSDCard();
   initGnss();
+  setOrigin(50);
   Serial.println("Components initialized");
 
   pinMode(GreenLedPin, OUTPUT);
