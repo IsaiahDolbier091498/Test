@@ -2,13 +2,11 @@
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 
 SFE_UBLOX_GNSS gnss;
-const float alpha = 0.9;
+const float alpha = 0.05;
 float filteredLat;
 float filteredLong;
-float latSum;
-float longSum;
-float originLat;
-float originLong;
+float latOrigin;
+float longOrigin;
 
 void initGnss()
 {
@@ -37,32 +35,17 @@ void setOrigin(int samples)
     {
         if(gnss.getPVT())
         {
-        filteredLat = alpha * filteredLat + (1 - alpha) * (gnss.getLatitude() / 1e7);
-        filteredLong = alpha * filteredLong + (1 - alpha) * (gnss.getLongitude() / 1e7);
+        filteredLat = alpha * filteredLat + (1 - alpha) * (gnss.getLatitude());
+        filteredLong = alpha * filteredLong + (1 - alpha) * (gnss.getLongitude());
         i++;
         }
     }
-
-    for (int i =0; i < samples;)
-    {
-        if(gnss.getPVT())
-        {
-        filteredLat = alpha * filteredLat + (1 - alpha) * (gnss.getLatitude() / 1e7);
-        filteredLong = alpha * filteredLong + (1 - alpha) * (gnss.getLongitude() / 1e7);
-        latSum += filteredLat;
-        longSum += filteredLong;
-        i++;
-        }
-    }
-
-    originLat = latSum/samples;
-    originLong = longSum/samples;
 
     Serial.print("Lat origin: ");
-    Serial.println(originLat, 7);
+    Serial.println(latOrigin, 7);
 
     Serial.print("Long origin: ");
-    Serial.println(originLong, 7);
+    Serial.println(longOrigin, 7);
 
 }
 
