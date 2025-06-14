@@ -20,7 +20,7 @@ void setup() {
   //initServos();
   //initSDCard();
   initGnss();
-  setOrigin(50);
+  setOrigin(200);
   Serial.println("Components initialized");
 
   pinMode(GreenLedPin, OUTPUT);
@@ -35,7 +35,7 @@ void setup() {
 }
 
 //Repeatedly updates sensors and control surfaces in loop()
-void loop() 
+void loop()
 {
   getGnssCoords();
   //updateAltitude();

@@ -2,7 +2,7 @@
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 
 SFE_UBLOX_GNSS gnss;
-const float alpha = 0.05;
+const float alpha = 0.1;
 float filteredLat;
 float filteredLong;
 float latOrigin;
@@ -16,8 +16,7 @@ void initGnss()
     if (!gnss.begin(Wire1))
     {
         Serial.println("ZOE-M8Q not found");
-        while (1)
-            ;
+        while (1);
     }
 
     Serial.println("GNSS initialized");
@@ -46,7 +45,7 @@ void initGnss()
     }
     Serial.println("Accuracy: Maxed (3D fix acquired)");
 
-    delay(5000);
+    delay(15000);
 }
 
 void setOrigin(int samples)
@@ -65,10 +64,10 @@ void setOrigin(int samples)
     longOrigin = filteredLong;
 
     Serial.print("Lat origin: ");
-    Serial.println(latOrigin, 7);
+    Serial.println(latOrigin / 1e7, 8);
 
     Serial.print("Long origin: ");
-    Serial.println(longOrigin, 7);
+    Serial.println(longOrigin / 1e7, 8);
 }
 
 void getGnssCoords()
@@ -80,9 +79,9 @@ void getGnssCoords()
         Serial.println(gnss.getFixType());
 
         Serial.print("Lat: ");
-        Serial.println(gnss.getLatitude() / 1e7, 7);
+        Serial.println(gnss.getLatitude() / 1e7, 8);
 
         Serial.print("Long: ");
-        Serial.println(gnss.getLongitude() / 1e7, 7);
+        Serial.println(gnss.getLongitude() / 1e7, 8);
     }
 }
