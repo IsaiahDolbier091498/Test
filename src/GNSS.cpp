@@ -41,6 +41,9 @@ void setOrigin(int samples)
         }
     }
 
+    latOrigin = filteredLat;
+    longOrigin = filteredLong;
+
     Serial.print("Lat origin: ");
     Serial.println(latOrigin, 7);
 
