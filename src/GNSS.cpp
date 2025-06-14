@@ -16,28 +16,48 @@ void initGnss()
     if (!gnss.begin(Wire1))
     {
         Serial.println("ZOE-M8Q not found");
-        while (1);
+        while (1)
+            ;
     }
+
+    Serial.println("GNSS initialized");
 
     gnss.setNavigationFrequency(5);
 
     Serial.println("Waiting for accurate readings...");
-    while(gnss.getFixType() != 3)
+
+    while (gnss.getFixType() != 3)
+    {
+        switch (gnss.getFixType())
+        {
+        case 0:
+            Serial.println("Accuracy: Extremely low/nonexistant");
+            break;
+
+        case 1:
+            Serial.println("Accuracy: Low");
+            break;
+
+        case 2:
+            Serial.println("Accuracy: Decent (2D fix)");
+            break;
+        }
+        delay(1000);
+    }
+    Serial.println("Accuracy: Maxed (3D fix acquired)");
 
     delay(5000);
-
-    Serial.println("GNSS initialized");
 }
 
 void setOrigin(int samples)
 {
-    for (int i =0; i < samples;)
+    for (int i = 0; i < samples;)
     {
-        if(gnss.getPVT())
+        if (gnss.getPVT())
         {
-        filteredLat = alpha * filteredLat + (1 - alpha) * (gnss.getLatitude());
-        filteredLong = alpha * filteredLong + (1 - alpha) * (gnss.getLongitude());
-        i++;
+            filteredLat = alpha * filteredLat + (1 - alpha) * (gnss.getLatitude());
+            filteredLong = alpha * filteredLong + (1 - alpha) * (gnss.getLongitude());
+            i++;
         }
     }
 
@@ -49,14 +69,13 @@ void setOrigin(int samples)
 
     Serial.print("Long origin: ");
     Serial.println(longOrigin, 7);
-
 }
 
 void getGnssCoords()
 {
     if (gnss.getPVT())
     {
-        
+
         Serial.print("Fix type: ");
         Serial.println(gnss.getFixType());
 
