@@ -2,7 +2,7 @@
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 
 SFE_UBLOX_GNSS gnss;
-const float alpha = 0.05;
+const float alpha = 0.1;
 float filteredLat;
 float filteredLong;
 float latOrigin;
@@ -71,16 +71,14 @@ void setOrigin(int samples)
     longOrigin = filteredLong;
 
     Serial.print("Lat origin: ");
-    Serial.println(latOrigin, 7);
+    Serial.println(latOrigin / 1e7, 8);
 
     Serial.print("Long origin: ");
-    Serial.println(longOrigin, 7);
+    Serial.println(longOrigin / 1e7, 8);
 }
 
 void getGnssCoords()
 {
-
-
         // Serial.print("Fix type: ");
         // Serial.println(gnss.getFixType());
 
