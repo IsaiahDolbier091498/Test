@@ -105,7 +105,7 @@ void updateAltitude() {
   // Adjusts for drift when stationary
   if (state[1] < 0.5 && filterCount > samples && launchDetected == false) {
   drift = filteredAltitude - initialAltitude;
-  initialAltitude += drift * 0.1;
+  initialAltitude += drift * 0.05;
   }
   else if (state[1] >= 0.5)
   {
