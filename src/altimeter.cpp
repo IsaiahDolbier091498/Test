@@ -31,15 +31,15 @@ int filterCount = 0;
 
 // Initializes I2C and sensor
 void initSensors() {
-  Wire.begin();
   if (!bmp.begin_I2C()) {
     Serial.println("BMP390 not found!");
     while (1);
   }
 
-  bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_2X);
+  bmp.setTemperatureOversampling(BMP3_NO_OVERSAMPLING);
   bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
-  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_127);
+  bmp.setOutputDataRate(BMP3_ODR_200_HZ);
   delay(100);
 
   lastTime = millis();
@@ -111,6 +111,9 @@ void updateAltitude() {
   {
     launchDetected = true;
   }
+
+  // Serial.print(" | Vel: "); Serial.print(velocity);
+  // Serial.print(" | Alt: "); Serial.println(relativeAltitude);
 }
 
 void calibrateAltimeter(int sampleAmount)
@@ -121,6 +124,7 @@ void calibrateAltimeter(int sampleAmount)
     while (!bmp.performReading()) delay (5);
     updateAltitude();
   }
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
 }
 
 /* --- Kalman Filter ---

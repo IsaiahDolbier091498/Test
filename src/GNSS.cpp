@@ -14,9 +14,6 @@ int fixType;
 
 void initGnss()
 {
-    Wire1.begin();
-    Wire1.setClock(400000);
-
     if (!gnss.begin(Wire1))
     {
         Serial.println("ZOE-M8Q not found");
