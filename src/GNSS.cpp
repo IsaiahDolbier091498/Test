@@ -76,6 +76,7 @@ void setOrigin(int samples)
 
 void getGnssCoords()
 {
+    if(!gnss.getPVT()) return;
         // Serial.print("Fix type: ");
         // Serial.println(gnss.getFixType());
 

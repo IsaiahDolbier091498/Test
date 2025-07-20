@@ -7,7 +7,7 @@
 // Handles altitude estimation and control surface logic
 
 // --- IMU Config ---
-Adafruit_BNO08x bno08x(5); // reset pin
+Adafruit_BNO08x bno08x;
 sh2_SensorValue_t sensorValue;
 
 struct Quaternion {
@@ -51,13 +51,10 @@ void initServos() {
     while (1);
   }
 
-  bno08x.enableReport(SH2_GAME_ROTATION_VECTOR);
+  bno08x.enableReport(SH2_GAME_ROTATION_VECTOR, 5000);
 }
 
 void updateIMUandServos() {
-  if (millis() - lastUpdate < updateInterval) return;
-  lastUpdate = millis();
-
   if (!bno08x.getSensorEvent(&sensorValue)) return;
   if (sensorValue.sensorId != SH2_GAME_ROTATION_VECTOR) return;
 
@@ -80,6 +77,7 @@ void updateIMUandServos() {
     q_initial = q_current;
     isZeroed = true;
     Serial.println("IMU orientation zeroed.");
+    Serial.println("Calibrating IMU...");
     return;
   }
 
@@ -136,10 +134,14 @@ void updateIMUandServos() {
   // s3 = (88);
   // s4 = (86);
 
+  if (millis() - lastUpdate >= updateInterval)
+  {
   servo1.write(s1);
   servo2.write(s2);
   servo3.write(s3);
   servo4.write(s4);
+  lastUpdate = millis();
+  }
 
   // Serial debugging -- comment out before launch
   if (isCalibrated == true)
@@ -160,4 +162,5 @@ void calibrateIMU(int sampleAmount)
     delay(5);
   }
   isCalibrated = true;
+  Serial.println("IMU calibrated...");
 }

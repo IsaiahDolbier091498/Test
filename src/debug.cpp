@@ -24,10 +24,9 @@ void reset()
 
 void resetBNO085()
 {
-  Serial.println("Resetting BNO085...");
   pinMode(2, OUTPUT);
   digitalWrite(2, LOW);
-  delay(2000);
+  delay(1000);
   digitalWrite(2, HIGH);
   delay(2000);
 }
@@ -38,6 +37,10 @@ void checkI2CLines()
   Wire.end();
   Wire1.end();
 
+  Serial.println("Resetting IMU...");
+  resetBNO085();
+
+  Serial.println("Checking I2C lines...");
   pinMode(19, INPUT_PULLUP);
   pinMode(18, INPUT_PULLUP);
   pinMode(17, INPUT_PULLUP);
@@ -48,15 +51,14 @@ void checkI2CLines()
   int sda1 = digitalRead(17);
   int scl1 = digitalRead(16);
 
-  Serial.printf("SDA: %s\n ", sda ? "HIGH" : "LOW");
-  Serial.printf("SDA1: %s\n ", sda1 ? "HIGH" : "LOW");
-  Serial.printf("SCL: %s\n ", scl ? "HIGH" : "LOW");
-  Serial.printf("SCL1: %s\n ", scl1 ? "HIGH" : "LOW");
+  Serial.printf("SDA: %s\n", sda ? "HIGH" : "LOW");
+  Serial.printf("SDA1: %s\n", sda1 ? "HIGH" : "LOW");
+  Serial.printf("SCL: %s\n", scl ? "HIGH" : "LOW");
+  Serial.printf("SCL1: %s\n", scl1 ? "HIGH" : "LOW");
 
   if (sda == 0)
   {
     Serial.println("SDA stuck LOW, rebooting SDA line...");
-    resetBNO085();
     pinMode(19, OUTPUT);
 
     for (int i = 0; i < 9; i++)

@@ -8,26 +8,29 @@ const float seaLevelPressure = 1013.25; // in hPa
 int samples;
 float drift;
 bool launchDetected = false;
-
-// Kalman state variables
-float state[2] = {0.0, 0.0}; // state[0] = altitude, state[1] = velocity
-float covariance[2][2] = {
-  {1.0, 0.0},
-  {0.0, 1.0}
-};
-
-// Kalman filter tuning parameters
-float measurementNoise = 8;      // Measurement noise
-float processAltitudeNoise = 0.01; // Process noise for altitude
-float processVelocityNoise = 0.1;  // Process noise for velocity
-
-// Outputs
-float rawAltitude = 0.0, filteredAltitude = 0.0, relativeAltitude = 0.0;
-float velocity = 0.0;
-bool initialAltitudeSet = false;
-float initialAltitude = 0.0;
 unsigned long lastTime = 0;
-int filterCount = 0;
+
+#define BMP390_I2C_ADDR 0x77
+
+bool i2c_write_register(uint8_t deviceAddr, uint8_t regAddr, uint8_t value) {
+  Wire.beginTransmission(deviceAddr);
+  Wire.write(regAddr);
+  Wire.write(value);
+  return Wire.endTransmission() == 0; // returns true if successful
+}
+
+bool enableBmp390Interrupt() {
+  const uint8_t int_ctrl_reg = 0x19;
+  const uint8_t config = 0x40;
+
+  if (!i2c_write_register(BMP390_I2C_ADDR, int_ctrl_reg, config)) {
+    Serial.println("Failed to write INT_CTRL");
+    return false;
+  }
+
+  Serial.println("BMP390 interrupt enabled (data-ready only)");
+  return true;
+}
 
 // Initializes I2C and sensor
 void initSensors() {
@@ -37,20 +40,49 @@ void initSensors() {
   }
 
   bmp.setTemperatureOversampling(BMP3_NO_OVERSAMPLING);
-  bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
-  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_127);
+  bmp.setPressureOversampling(BMP3_OVERSAMPLING_2X);
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_DISABLE);
   bmp.setOutputDataRate(BMP3_ODR_200_HZ);
   delay(100);
+
+  
+
+    if (!enableBmp390Interrupt()) 
+    {
+    Serial.println("Failed to enable BMP390 interrupt!");
+    while (1);
+    }
 
   lastTime = millis();
 }
 
+// Kalman state variables
+float state[2] = {0.0, 0.0}; // state[0] = altitude, state[1] = velocity
+float covariance[2][2] = {
+  {1.0, 0.0},
+  {0.0, 1.0}
+};
+
+// Kalman filter tuning parameters
+float measurementNoise = 6.0;      // Measurement noise
+float processAltitudeNoise = 0.015; // Process noise for altitude
+float processVelocityNoise = 0.05;  // Process noise for velocity
+
+// Outputs
+float rawAltitude = 0.0, filteredAltitude = 0.0, relativeAltitude = 0.0;
+float velocity = 0.0;
+bool initialAltitudeSet = false;
+float initialAltitude = 0.0;
+int filterCount = 0;
+
 // Runs the 2 state Kalman filter to get altitude and velocity
 void updateAltitude() {
-  if (!bmp.performReading()) return;
+
+  float pressure = bmp.readPressure();
+  if(isnan(pressure)) return;
 
   // Read and convert to altitude
-  float pressure = bmp.pressure / 100.0;
+  pressure /= 100.0;
   rawAltitude = (1 - pow(pressure / seaLevelPressure, 0.190284)) * 44330.0;
 
   // Time delta in seconds
@@ -97,17 +129,17 @@ void updateAltitude() {
   if (!initialAltitudeSet && filterCount >= samples) {
     initialAltitude = filteredAltitude;
     initialAltitudeSet = true;
-    Serial.println("Initial altitude set.");
+    Serial.println("Initial altitude set...");
   }
 
   relativeAltitude = filteredAltitude - initialAltitude;
 
   // Adjusts for drift when stationary
-  if (state[1] < 0.5 && filterCount > samples && launchDetected == false) {
+  if (state[1] < 0.6 && filterCount > samples && launchDetected == false) {
   drift = filteredAltitude - initialAltitude;
-  initialAltitude += drift * 0.05;
+  initialAltitude += drift * 0.2;
   }
-  else if (state[1] >= 0.5)
+  else if (state[1] >= 0.6)
   {
     launchDetected = true;
   }
@@ -118,13 +150,13 @@ void updateAltitude() {
 
 void calibrateAltimeter(int sampleAmount)
 {
+  Serial.println("Calibrating altimeter...");
   samples = sampleAmount;
   for (int i = 0; i < sampleAmount; i++)
   {
     while (!bmp.performReading()) delay (5);
     updateAltitude();
   }
-  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
 }
 
 /* --- Kalman Filter ---

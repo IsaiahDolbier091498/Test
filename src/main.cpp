@@ -4,7 +4,6 @@
 #include "SDWriter.h"
 #include "debug.h"
 #include "GNSS.h"
-#include <TeensyThreads.h>
 #include <Wire.h>
 
 const unsigned long logInterval = 40;
@@ -15,33 +14,21 @@ unsigned long initTimeTaken;
 
 unsigned long setGNSSFrequency = 100; // ms - 100ms = 10hz
 
-void AFS()
-{
-  while (1)
-  {
-    unsigned long now = millis();
-    updateAltitude();
-    updateIMUandServos();
-    unsigned long finished = millis();
-    Serial.print(finished - now);
-    Serial.println(" ms elapsed");
-    threads.yield();    
-  }
-}
+volatile bool BMP390DataReady = false;
 
-void GNSS()
+void BMP390Interrupt()
 {
-  while (1)
-  {
-    getGnssCoords();
-    threads.delay(setGNSSFrequency);
-  }
+  BMP390DataReady = true;
 }
 
 // Initializes and calibrates the components during setup()
 void setup() {
+  Serial.begin(2000000);
+
+  pinMode(3, INPUT);
+  attachInterrupt(digitalPinToInterrupt(3), BMP390Interrupt, FALLING);
+
   delay(3000);
-  Serial.begin(115200);
   Serial.printf("CPU speed: %lu MHz\n", F_CPU / 1000000);
   checkI2CLines();
 
@@ -64,20 +51,47 @@ void setup() {
 
   pinMode(GreenLedPin, OUTPUT);
 
-  Serial.println("Waiting on sensor calibration...");
   calibrateAltimeter(1000); // Sample amount
   calibrateIMU(1000); // Sample amount
 
   Serial.println("System ready");
   digitalWrite(GreenLedPin, HIGH);
   initTimeTaken = millis();
-
-  threads.addThread(AFS);
-  threads.addThread(GNSS);
 }
 
 //Repeatedly updates sensors and control surfaces in loop()
+
+// unsigned long avgRunTime = 0;
+// unsigned long totalTime = 0;
+// int loopCount = 0;
+
 void loop() 
 {
-  //logTelemetry(millis(), initTimeTaken, logInterval);
+  // unsigned long startTime = micros();
+
+  if (BMP390DataReady)
+  {
+    BMP390DataReady = false;
+    updateAltitude();
+  }
+
+  updateIMUandServos();
+  getGnssCoords();
+  //logTelemetry(millis(), initTimeTaken, 50);
+
+
+  // unsigned long endTime = micros();
+
+  // Serial.println((endTime-startTime) / 1000.0);
+
+  // totalTime += (endTime - startTime);
+  // loopCount++;
+
+  // if(loopCount >= 15000)
+  // {
+  //   avgRunTime = totalTime / loopCount;
+  //   Serial.println(avgRunTime  / 1000.0);
+  //   while(1);
+  // }
+
 }
