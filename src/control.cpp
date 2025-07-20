@@ -45,7 +45,6 @@ void initServos() {
   servo2.attach(6);
   servo3.attach(8);
   servo4.attach(9);
-
   if (!bno08x.begin_I2C()) {
     Serial.println("BNO08x not found");
     while (1);

@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "GNSS.h"
 #include <Wire.h>
+#include "RunCam.h"
 
 const unsigned long logInterval = 40;
 
@@ -21,10 +22,11 @@ void BMP390Interrupt()
   BMP390DataReady = true;
 }
 
+
 // Initializes and calibrates the components during setup()
 void setup() {
   Serial.begin(2000000);
-
+  //Serial1.begin(115200);
   pinMode(3, INPUT);
   attachInterrupt(digitalPinToInterrupt(3), BMP390Interrupt, FALLING);
 
@@ -51,6 +53,8 @@ void setup() {
 
   pinMode(GreenLedPin, OUTPUT);
 
+  //startRecording();
+  
   calibrateAltimeter(1000); // Sample amount
   calibrateIMU(1000); // Sample amount
 

@@ -12,6 +12,8 @@ unsigned long lastTime = 0;
 
 #define BMP390_I2C_ADDR 0x77
 
+// Writes command to the register. In this case it's to enable the interrupt pin
+// Using the interrupt pin allows the sensor to be read only when ready. performReading() is blocking.
 bool i2c_write_register(uint8_t deviceAddr, uint8_t regAddr, uint8_t value) {
   Wire.beginTransmission(deviceAddr);
   Wire.write(regAddr);
@@ -45,13 +47,11 @@ void initSensors() {
   bmp.setOutputDataRate(BMP3_ODR_200_HZ);
   delay(100);
 
-  
-
-    if (!enableBmp390Interrupt()) 
-    {
+  if (!enableBmp390Interrupt()) 
+  {
     Serial.println("Failed to enable BMP390 interrupt!");
     while (1);
-    }
+  }
 
   lastTime = millis();
 }
