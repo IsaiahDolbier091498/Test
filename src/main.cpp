@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "GNSS.h"
 #include <Wire.h>
+#include "events.h"
 
 const unsigned long logInterval = 40;
 
@@ -70,12 +71,14 @@ void loop()
 
   if (BMP390DataReady)
   {
+    newDataFlag = true;
     BMP390DataReady = false;
     updateAltitude();
   }
 
   updateIMUandServos();
   getGnssCoords();
+  getAvgAlt(newDataFlag);
   //logTelemetry(millis(), initTimeTaken, 50);
 
 

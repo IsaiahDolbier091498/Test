@@ -143,14 +143,14 @@ void updateIMUandServos() {
   }
 
   // Serial debugging -- comment out before launch
-  if (isCalibrated == true)
-  {
-  Serial.print("Pitch: "); Serial.print(filteredPitch);
-  Serial.print(" | Roll: "); Serial.print(filteredRoll);
-  Serial.print(" | Yaw: "); Serial.print(filteredYaw);
-  Serial.print(" | Vel: "); Serial.print(velocity);
-  Serial.print(" | Alt: "); Serial.println(relativeAltitude);
-  }
+  // if (isCalibrated == true)
+  // {
+  // Serial.print("Pitch: "); Serial.print(filteredPitch);
+  // Serial.print(" | Roll: "); Serial.print(filteredRoll);
+  // Serial.print(" | Yaw: "); Serial.print(filteredYaw);
+  // Serial.print(" | Vel: "); Serial.print(velocity);
+  // Serial.print(" | Alt: "); Serial.println(relativeAltitude);
+  // }
 }
 
 void calibrateIMU(int sampleAmount)
