@@ -1,8 +1,9 @@
 #include "control.h"
 #include "altimeter.h"
 #include <Adafruit_BNO08x.h>
-#include <Servo.h>
+#include <PWMServo.h>
 #include <math.h>
+#include "debug.h"
 
 // Handles altitude estimation and control surface logic
 
@@ -22,45 +23,61 @@ bool isCalibrated = false;
 float Kp = 0.5;
 float Kv = 0.2;
 
-Servo servo1, servo2, servo3, servo4;
+PWMServo servo1, servo2, servo3, servo4;
 
 int s1, s2, s3, s4;
 
 float adjustedPitch, adjustedRoll, adjustedYaw;
-float filteredPitch = 0, filteredRoll = 0, filteredYaw = 0;
+float filteredPitch = 0, filteredRoll = 0, filteredYaw = 0, filteredAccel;
 
+float maxDeflectionAngle = 20;
 float deadband = 0.5;
 float norm;
+float accel = 0;
 
 // Update rate control
 unsigned long lastUpdate = 0;
-const unsigned long updateInterval = 20; // milliseconds
+const unsigned long updateInterval = 5; // milliseconds - 5 ms is 200 hz
 
 // Low-pass filter coefficient
 float alpha = 0.7;
 
 // Initialization
 void initServos() {
-  servo1.attach(7);
-  servo2.attach(6);
-  servo3.attach(8);
-  servo4.attach(9);
-  if (!bno08x.begin_I2C()) {
+  analogWriteFrequency(6, 200);
+  analogWriteFrequency(7, 200);
+  analogWriteFrequency(8, 200);
+  analogWriteFrequency(9, 200);
+
+  servo1.attach(6, 1100, 1900);
+  servo2.attach(7, 1100, 1900);
+  servo3.attach(8, 1100, 1900);
+  servo4.attach(9, 1100, 1900);
+  
+  if (!bno08x.begin_I2C(0x4A, &Wire1)) {
     Serial.println("BNO08x not found");
+    errorStatusLED();
     while (1);
   }
 
   bno08x.enableReport(SH2_GAME_ROTATION_VECTOR, 5000);
+  //bno08x.enableReport(SH2_LINEAR_ACCELERATION, 10000);
 }
 
 void updateIMUandServos() {
   if (!bno08x.getSensorEvent(&sensorValue)) return;
-  if (sensorValue.sensorId != SH2_GAME_ROTATION_VECTOR) return;
 
   float q0 = sensorValue.un.gameRotationVector.real;
   float q1 = sensorValue.un.gameRotationVector.i;
   float q2 = sensorValue.un.gameRotationVector.j;
   float q3 = sensorValue.un.gameRotationVector.k;
+
+  // if (sensorValue.sensorId == SH2_LINEAR_ACCELERATION)
+  // {
+  //   accel = sensorValue.un.linearAcceleration.z;
+  //   Serial.printf("Acceleration: %f\n", accel);
+  // } 
+
 
   norm = sqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
   if (abs(norm - 1.0f) > 0.01f) {
@@ -113,6 +130,7 @@ void updateIMUandServos() {
   filteredPitch = alpha * filteredPitch + (1 - alpha) * adjustedPitch;
   filteredRoll  = alpha * filteredRoll  + (1 - alpha) * adjustedRoll;
   filteredYaw   = alpha * filteredYaw   + (1 - alpha) * adjustedYaw;
+  filteredAccel = alpha * filteredAccel + (1 - alpha) * filteredAccel;
 
   if (abs(filteredPitch) < deadband) filteredPitch = 0;
   if (abs(filteredRoll)  < deadband) filteredRoll = 0;
@@ -123,15 +141,14 @@ void updateIMUandServos() {
   int correctionRoll  = constrain((Kp * filteredRoll), -15, 15);
   int correctionYaw   = constrain((Kp * filteredYaw), -15, 15);
 
-  s1 = constrain(79 - correctionPitch + correctionRoll , 45, 135);
+  s1 = constrain(90 - correctionPitch + correctionRoll , 45, 135);
   s2 = constrain(98 + correctionPitch + correctionRoll , 45, 135);
   s3 = constrain(88  + correctionRoll + correctionYaw, 45, 135);
   s4 = constrain(86  + correctionRoll - correctionYaw, 45, 135);
 
-  // s1 = (79);
-  // s2 = (98);
-  // s3 = (88);
-  // s4 = (86);
+  //s1 = 0; // Min - 45 degrees counterclockwise
+  //s1 = 90; // Neutral - 0 degrees
+  //s1 = 180; // Max - 45 degrees clockwise
 
   if (millis() - lastUpdate >= updateInterval)
   {
@@ -141,6 +158,8 @@ void updateIMUandServos() {
   servo4.write(s4);
   lastUpdate = millis();
   }
+
+  Serial.println(s1);
 
   // Serial debugging -- comment out before launch
   // if (isCalibrated == true)

@@ -1,6 +1,7 @@
 #include "altimeter.h"
 #include <Adafruit_BMP3XX.h>
 #include <Wire.h>
+#include "debug.h"
 
 // --- Altimeter ---
 Adafruit_BMP3XX bmp;
@@ -15,10 +16,10 @@ unsigned long lastTime = 0;
 // Writes command to the register. In this case it's to enable the interrupt pin
 // Using the interrupt pin allows the sensor to be read only when ready. performReading() is blocking.
 bool i2c_write_register(uint8_t deviceAddr, uint8_t regAddr, uint8_t value) {
-  Wire.beginTransmission(deviceAddr);
-  Wire.write(regAddr);
-  Wire.write(value);
-  return Wire.endTransmission() == 0; // returns true if successful
+  Wire1.beginTransmission(deviceAddr);
+  Wire1.write(regAddr);
+  Wire1.write(value);
+  return Wire1.endTransmission() == 0; // returns true if successful
 }
 
 bool enableBmp390Interrupt() {
@@ -36,8 +37,9 @@ bool enableBmp390Interrupt() {
 
 // Initializes I2C and sensor
 void initSensors() {
-  if (!bmp.begin_I2C()) {
+  if (!bmp.begin_I2C(0x77, &Wire1)) {
     Serial.println("BMP390 not found!");
+    errorStatusLED();
     while (1);
   }
 

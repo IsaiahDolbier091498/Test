@@ -6,6 +6,7 @@
 
 volatile bool loggingEnabled = true;
 
+// Resets teensy 4.1
 void reset()
 {
   // Shuts down SDWriter
@@ -22,6 +23,7 @@ void reset()
   SCB_AIRCR = 0x05FA0004;
 }
 
+// Resets IMU as it is one of the main culprits that jams the I2C line low
 void resetBNO085()
 {
   pinMode(2, OUTPUT);
@@ -31,7 +33,7 @@ void resetBNO085()
   delay(2000);
 }
 
-
+// Checks / resets I2C line. High status is normal and low means the I2C line is stuck and needs to be rebooted
 void checkI2CLines()
 {
   Wire.end();
@@ -72,8 +74,85 @@ void checkI2CLines()
     pinMode(19, INPUT_PULLUP);
     sda = digitalRead(18);
 
-    Serial.printf("SDA: %s\n ", sda ? "HIGH" : "LOW");
+    Serial.printf("SDA: %s\n", sda ? "HIGH" : "LOW");
+  }
+
+  if (sda1 == 0)
+  {
+    Serial.println("SDA1 stuck LOW, rebooting SDA1 line...");
+    pinMode(16, OUTPUT);
+
+    for (int i = 0; i < 9; i++)
+    {
+      digitalWrite(16, HIGH);
+      delayMicroseconds(5);
+      digitalWrite(16, LOW);
+      delayMicroseconds(5);
+    }
+
+    pinMode(16, INPUT_PULLUP);
+    sda1 = digitalRead(17);
+
+    Serial.printf("SDA1: %s\n", sda1 ? "HIGH" : "LOW");
   }
 
   delay(50); 
+}
+
+// Helper function for measureBattery. returns text status
+const char* batteryStatus(float percentage)
+{
+  if (percentage >= 95.0) return "FULL";
+  if (percentage >= 70.0) return "HIGH";
+  if (percentage >= 50.0) return "MEDIUM";
+  if (percentage >= 20.0) return "LOW";
+  else return "LOW -> Charge Immediately";
+}
+
+// Reads voltage from the main battery using voltage divider circuit
+void measureBattery()
+{
+  float maxLipoCharge = 8.4;
+  float minLipoCharge = 6.0;
+
+  float resistor1 = 9100.0;
+  float resistor2 = 5100.0;
+
+  float voltagOut = analogRead(A10) * (3.3 / 1023.0); // A10 is pin 24
+  float voltageIn = (voltagOut * (resistor1 + resistor2)) / resistor2;
+
+  float percentage = ((voltageIn - minLipoCharge) / (maxLipoCharge - minLipoCharge)) * 100.0;
+  if (percentage < 0) percentage = 0;
+
+  Serial.printf("Main Battery Voltage: %.2fV ~ %.1f%% -> %s\n", voltageIn, percentage, batteryStatus(percentage));
+}
+
+// Checks the fault flag of the main ejection charge driver (MIC2544) - pulls low to indicate over current or thermal shutdown
+void checkMIC2544MainFlag()
+{
+  pinMode(32, INPUT);
+  float faultFlag = digitalRead(32);
+  Serial.printf("MIC2544 Main Fault Flag: %s\n", faultFlag ? "INACTIVE" : "ACTIVE"); // Inactive good - active bad :(
+}
+
+// Checks the fault flag of the backup ejection charge driver (MIC2544) - pulls low to indicate over current or thermal shutdown
+void checkMIC2544BackupFlag()
+{
+  pinMode(33, INPUT);
+  float faultFlag = digitalRead(33);
+  Serial.printf("MIC2544 Backup Fault Flag: %s\n", faultFlag ? "INACTIVE" : "ACTIVE"); // Inactive good - active bad :(
+}
+
+// Turns on green LED to indicate everything is performing as expected
+void nominalStatusLED()
+{
+  pinMode(35, OUTPUT);
+  digitalWrite(35, LOW); // Pull low to turn on common anode LED
+}
+
+// Turns on red LED to indicate sensor or other module isn't working
+void errorStatusLED()
+{
+  pinMode(36, OUTPUT);
+  digitalWrite(36, LOW); // Pull low to turn on common anode LED
 }

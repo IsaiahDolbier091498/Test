@@ -1,5 +1,6 @@
 #include <Wire.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
+#include "debug.h"
 
 SFE_UBLOX_GNSS gnss;
 const float alpha = 0.1;
@@ -14,9 +15,10 @@ int fixType;
 
 void initGnss()
 {
-    if (!gnss.begin(Wire1))
+    if (!gnss.begin(Wire))
     {
         Serial.println("ZOE-M8Q not found");
+        errorStatusLED();
         while (1);
     }
 

@@ -36,6 +36,22 @@ float getAvgAlt(bool newData)
     return avgAltitude;
 }
 
+void ejectionChargeMain()
+{
+    pinMode(31, INPUT);
+    digitalWrite(31, HIGH);
+    delay(5000);
+    digitalWrite(31, LOW);
+}
+
+void ejectionChargeBackup()
+{
+    pinMode(34, INPUT);
+    digitalWrite(34, HIGH);
+    delay(5000);
+    digitalWrite(34, LOW);
+}
+
 void preLaunch()
 {
 
