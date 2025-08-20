@@ -2,10 +2,11 @@
 #define CONTROL_H
 //Exports control functions
 
-void initServos();
+void initIMU();
 void updateIMUandServos();
 void calibrateIMU(int sampleAmount);
 void printData();
+void initServos();
 
 extern float adjustedPitch;
 extern float adjustedRoll;

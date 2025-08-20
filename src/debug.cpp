@@ -118,8 +118,14 @@ void measureBattery()
   float resistor1 = 9100.0;
   float resistor2 = 5100.0;
 
-  float voltagOut = analogRead(A10) * (3.3 / 1023.0); // A10 is pin 24
-  float voltageIn = (voltagOut * (resistor1 + resistor2)) / resistor2;
+  float voltageOut = 0.0;
+  for (int i = 0; i < 10; i++)
+  {
+    voltageOut += analogRead(A10) * (3.3 / 1023.0); // A10 is pin 24
+    delay(2);
+  } 
+  voltageOut /= 10.0;
+  float voltageIn = (voltageOut * (resistor1 + resistor2)) / resistor2;
 
   float percentage = ((voltageIn - minLipoCharge) / (maxLipoCharge - minLipoCharge)) * 100.0;
   if (percentage < 0) percentage = 0;

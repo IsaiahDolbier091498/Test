@@ -1,9 +1,9 @@
 #include "control.h"
 #include "altimeter.h"
 #include <Adafruit_BNO08x.h>
-#include <PWMServo.h>
 #include <math.h>
 #include "debug.h"
+#include <algorithm>
 
 // Handles altitude estimation and control surface logic
 
@@ -11,8 +11,16 @@
 Adafruit_BNO08x bno08x;
 sh2_SensorValue_t sensorValue;
 
+IntervalTimer startTimer;
+IntervalTimer stopTimer;
+
 struct Quaternion {
   float w, x, y, z;
+};
+
+struct Servo {
+  int pin;
+  int angle;
 };
 
 Quaternion q_initial = {1, 0, 0, 0};
@@ -23,9 +31,16 @@ bool isCalibrated = false;
 float Kp = 0.5;
 float Kv = 0.2;
 
-PWMServo servo1, servo2, servo3, servo4;
+int servoP1 = 6, servoP2 = 7, servoP3 = 8, servoP4 = 9;
 
 int s1, s2, s3, s4;
+Servo servoArray[4] = 
+{ 
+  {servoP1 , s1},
+  {servoP2 , s2},
+  {servoP3 , s3},
+  {servoP4 , s4}
+};
 
 float adjustedPitch, adjustedRoll, adjustedYaw;
 float filteredPitch = 0, filteredRoll = 0, filteredYaw = 0, filteredAccel;
@@ -42,26 +57,30 @@ const unsigned long updateInterval = 5; // milliseconds - 5 ms is 200 hz
 // Low-pass filter coefficient
 float alpha = 0.7;
 
-// Initialization
-void initServos() {
-  analogWriteFrequency(6, 200);
-  analogWriteFrequency(7, 200);
-  analogWriteFrequency(8, 200);
-  analogWriteFrequency(9, 200);
+int pulseWidthArray[4];
+volatile int PWMIndex = 0;
 
-  servo1.attach(6, 1100, 1900);
-  servo2.attach(7, 1100, 1900);
-  servo3.attach(8, 1100, 1900);
-  servo4.attach(9, 1100, 1900);
-  
+int pulseWidth(int servoAngle)
+{
+  return map(servoAngle, 0, 90, 1100, 1900);
+}
+
+// Initialization
+void initIMU() {  
   if (!bno08x.begin_I2C(0x4A, &Wire1)) {
     Serial.println("BNO08x not found");
     errorStatusLED();
     while (1);
   }
-
   bno08x.enableReport(SH2_GAME_ROTATION_VECTOR, 5000);
-  //bno08x.enableReport(SH2_LINEAR_ACCELERATION, 10000);
+}
+
+void initServos()
+{
+  pinMode(servoP1, OUTPUT);
+  pinMode(servoP2, OUTPUT);
+  pinMode(servoP3, OUTPUT);
+  pinMode(servoP4, OUTPUT);
 }
 
 void updateIMUandServos() {
@@ -71,13 +90,6 @@ void updateIMUandServos() {
   float q1 = sensorValue.un.gameRotationVector.i;
   float q2 = sensorValue.un.gameRotationVector.j;
   float q3 = sensorValue.un.gameRotationVector.k;
-
-  // if (sensorValue.sensorId == SH2_LINEAR_ACCELERATION)
-  // {
-  //   accel = sensorValue.un.linearAcceleration.z;
-  //   Serial.printf("Acceleration: %f\n", accel);
-  // } 
-
 
   norm = sqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
   if (abs(norm - 1.0f) > 0.01f) {
@@ -130,36 +142,26 @@ void updateIMUandServos() {
   filteredPitch = alpha * filteredPitch + (1 - alpha) * adjustedPitch;
   filteredRoll  = alpha * filteredRoll  + (1 - alpha) * adjustedRoll;
   filteredYaw   = alpha * filteredYaw   + (1 - alpha) * adjustedYaw;
-  filteredAccel = alpha * filteredAccel + (1 - alpha) * filteredAccel;
 
   if (abs(filteredPitch) < deadband) filteredPitch = 0;
   if (abs(filteredRoll)  < deadband) filteredRoll = 0;
   if (abs(filteredYaw)   < deadband) filteredYaw = 0;
 
   // === Combine Orientation + Velocity into Control ===
-  int correctionPitch = constrain((Kp * filteredPitch + Kv * velocity), -15, 15);
-  int correctionRoll  = constrain((Kp * filteredRoll), -15, 15);
-  int correctionYaw   = constrain((Kp * filteredYaw), -15, 15);
+  int correctionPitch = constrain((Kp * filteredPitch + Kv * velocity), -20, 20);
+  int correctionRoll  = constrain((Kp * filteredRoll), -20, 20);
+  int correctionYaw   = constrain((Kp * filteredYaw), -20, 20);
 
-  s1 = constrain(90 - correctionPitch + correctionRoll , 45, 135);
-  s2 = constrain(98 + correctionPitch + correctionRoll , 45, 135);
-  s3 = constrain(88  + correctionRoll + correctionYaw, 45, 135);
-  s4 = constrain(86  + correctionRoll - correctionYaw, 45, 135);
+  s1 = constrain(45 - correctionPitch + correctionRoll , 25, 65);
+  s2 = constrain(45 + correctionPitch + correctionRoll , 25, 65);
+  s3 = constrain(45  + correctionRoll + correctionYaw, 25, 65);
+  s4 = constrain(45  + correctionRoll - correctionYaw, 25, 65);
 
   //s1 = 0; // Min - 45 degrees counterclockwise
   //s1 = 90; // Neutral - 0 degrees
   //s1 = 180; // Max - 45 degrees clockwise
 
-  if (millis() - lastUpdate >= updateInterval)
-  {
-  servo1.write(s1);
-  servo2.write(s2);
-  servo3.write(s3);
-  servo4.write(s4);
-  lastUpdate = millis();
-  }
-
-  Serial.println(s1);
+  //Serial.println(s1);
 
   // Serial debugging -- comment out before launch
   // if (isCalibrated == true)
@@ -172,6 +174,57 @@ void updateIMUandServos() {
   // }
 }
 
+bool sortByAngle(Servo &a, Servo &b)
+{
+  return a.angle < b.angle;
+}
+
+bool sortByPin(Servo &a, Servo &b)
+{
+  return a.pin < b.pin;
+}
+
+void stopPulse()
+{
+  if(PWMIndex == 3)
+  {
+    digitalWrite(servoArray[PWMIndex].pin, LOW);
+    PWMIndex = 0;
+    stopTimer.end();
+  }
+  else
+  {
+    digitalWrite(servoArray[PWMIndex].pin, LOW);
+    PWMIndex++;
+    int nextDelay = pulseWidthArray[PWMIndex] - pulseWidthArray[PWMIndex - 1];
+    if (nextDelay <= 0) nextDelay = 1;
+    stopTimer.begin(stopPulse, nextDelay);
+  }
+}
+
+void startPulse()
+{
+  std::sort(servoArray, servoArray + 4, sortByPin);
+  
+  servoArray[0].angle = s1;
+  servoArray[1].angle = s2;
+  servoArray[2].angle = s3;
+  servoArray[3].angle = s4;
+  
+  std::sort(servoArray, servoArray + 4, sortByAngle);
+  for (int i = 0; i < 4; i++)
+  {
+    pulseWidthArray[i] = pulseWidth(servoArray[i].angle);
+  }
+
+  digitalWrite(servoP1, HIGH);
+  digitalWrite(servoP2, HIGH);
+  digitalWrite(servoP3, HIGH);
+  digitalWrite(servoP4, HIGH);
+
+  stopTimer.begin(stopPulse, pulseWidthArray[PWMIndex]);
+}
+
 void calibrateIMU(int sampleAmount)
 {
   for (int i = 0; i < sampleAmount; i++)
@@ -181,4 +234,5 @@ void calibrateIMU(int sampleAmount)
   }
   isCalibrated = true;
   Serial.println("IMU calibrated...");
+  startTimer.begin(startPulse, 4000);
 }

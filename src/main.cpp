@@ -44,12 +44,13 @@ void setup() {
   Serial.println("Initializing components...");
   initSensors();
   initServos();
+  initIMU();
   initSDCard();
   initGnss();
   //setOrigin(50);
   Serial.println("Components initialized");
 
-  calibrateAltimeter(1000); // Sample amount
+  calibrateAltimeter(100); // Sample amount
   calibrateIMU(1000); // Sample amount
 
   nominalStatusLED();
@@ -65,7 +66,7 @@ void setup() {
 
 void loop() 
 {
-  // unsigned long startTime = micros();
+  //unsigned long startTime = micros();
 
   if (BMP390DataReady)
   {
@@ -73,6 +74,7 @@ void loop()
     BMP390DataReady = false;
     updateAltitude();
   }
+
   //getAvgAlt(newDataFlag);
 
   updateIMUandServos();
