@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "SDWriter.h"
 #include "altimeter.h"
-#include "control.h"
+#include "IMU.h"
 #include <SPI.h>
 #include <SdFat.h>
 #include "RingBuf.h"

@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "altimeter.h"
-#include "control.h"
+#include "IMU.h"
+#include "actuators.h"
 #include "SDWriter.h"
 #include "debug.h"
 #include "GNSS.h"
@@ -14,6 +15,9 @@ unsigned long initTimeTaken;
 unsigned long setGNSSFrequency = 100; // ms - 100ms = 10hz
 
 volatile bool BMP390DataReady = false;
+
+IMU BNO08X;
+Actuators fins;
 
 void BMP390Interrupt()
 {
@@ -43,15 +47,15 @@ void setup() {
 
   Serial.println("Initializing components...");
   initSensors();
-  initServos();
-  initIMU();
+  fins.initServos();
+  BNO08X.initIMU();
   initSDCard();
   initGnss();
   //setOrigin(50);
   Serial.println("Components initialized");
 
   calibrateAltimeter(100); // Sample amount
-  calibrateIMU(1000); // Sample amount
+  BNO08X.calibrateIMU(1000); // Sample amount
 
   nominalStatusLED();
   Serial.println("System ready");
@@ -68,17 +72,20 @@ void loop()
 {
   //unsigned long startTime = micros();
 
+  fins.updateAngles();
+
   if (BMP390DataReady)
   {
     newDataFlag = true;
     BMP390DataReady = false;
     updateAltitude();
+    Serial.println("True");
   }
 
   //getAvgAlt(newDataFlag);
 
-  updateIMUandServos();
-  getGnssCoords();
+  //updateIMUandServos();
+  //getGnssCoords();
 
   //logTelemetry(millis(), initTimeTaken, 50);
 

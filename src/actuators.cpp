@@ -1,0 +1,119 @@
+#include <Arduino.h>
+#include "actuators.h"
+#include "IMU.h"
+
+IntervalTimer startTimer;
+IntervalTimer stopTimer;
+
+IMU BNO08X;
+
+int servoP1 = 6, servoP2 = 7, servoP3 = 8, servoP4 = 9;
+int s1 = 0, s2 = 0, s3 = 0, s4 = 0;
+
+int pulseWidthArray[4];
+volatile int PWMIndex = 0;
+
+struct Servo servoArray[4] = 
+  {
+    {servoP1, s1},
+    {servoP2, s2},
+    {servoP3, s3},
+    {servoP4, s4},
+  };
+
+int Actuators::pulseWidth(int servoAngle)
+{
+  return map(servoAngle, 0, 90, 1100, 1900);
+}
+
+void Actuators::initServos()
+{
+  pinMode(servoP1, OUTPUT);
+  pinMode(servoP2, OUTPUT);
+  pinMode(servoP3, OUTPUT);
+  pinMode(servoP4, OUTPUT);
+
+  startTimer.begin(startPulse, 4000);
+}
+
+void Actuators::updateAngles()
+{
+  //s1 = 0; // Min - 45 degrees counterclockwise
+  //s1 = 90; // Neutral - 0 degrees
+  //s1 = 180; // Max - 45 degrees clockwise
+  s1 = constrain(45 - BNO08X.getPitchCorrection() + BNO08X.getRollCorrection() , 25, 65);
+  s2 = constrain(45 + BNO08X.getPitchCorrection() + BNO08X.getRollCorrection() , 25, 65);
+  s3 = constrain(45  + BNO08X.getRollCorrection() + BNO08X.getYawCorrection(), 25, 65);
+  s4 = constrain(45  + BNO08X.getRollCorrection() - BNO08X.getYawCorrection(), 25, 65);
+}
+
+bool Actuators::sortByAngle(Servo &a, Servo &b)
+{
+  return a.angle < b.angle;
+}
+
+bool Actuators::sortByPin(Servo &a, Servo &b)
+{
+  return a.pin < b.pin;
+}
+
+void Actuators::stopPulse()
+{
+  if(PWMIndex == 3)
+  {
+    digitalWrite(servoArray[PWMIndex].pin, LOW);
+    PWMIndex = 0;
+    stopTimer.end();
+  }
+  else
+  {
+    digitalWrite(servoArray[PWMIndex].pin, LOW);
+    PWMIndex++;
+    int nextDelay = pulseWidthArray[PWMIndex] - pulseWidthArray[PWMIndex - 1];
+    if (nextDelay <= 0) nextDelay = 1;
+    stopTimer.begin(stopPulse, nextDelay);
+  }
+}
+
+void Actuators::startPulse()
+{
+  std::sort(servoArray, servoArray + 4, sortByPin);
+  
+  servoArray[0].angle = s1;
+  servoArray[1].angle = s2;
+  servoArray[2].angle = s3;
+  servoArray[3].angle = s4;
+  
+  std::sort(servoArray, servoArray + 4, sortByAngle);
+  for (int i = 0; i < 4; i++)
+  {
+    pulseWidthArray[i] = pulseWidth(servoArray[i].angle);
+  }
+
+  digitalWrite(servoP1, HIGH);
+  digitalWrite(servoP2, HIGH);
+  digitalWrite(servoP3, HIGH);
+  digitalWrite(servoP4, HIGH);
+
+  stopTimer.begin(stopPulse, pulseWidthArray[PWMIndex]);
+}
+
+int Actuators::getS1() 
+{
+  return s1;
+}
+
+int Actuators::getS2() 
+{
+  return s2;
+}
+
+int Actuators::getS3() 
+{
+  return s3;
+}
+
+int Actuators::getS4() 
+{
+  return s4;
+}
