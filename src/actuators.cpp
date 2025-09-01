@@ -5,15 +5,15 @@
 IntervalTimer startTimer;
 IntervalTimer stopTimer;
 
-IMU BNO08X;
+extern IMU BNO08X;
 
-int servoP1 = 6, servoP2 = 7, servoP3 = 8, servoP4 = 9;
-int s1 = 0, s2 = 0, s3 = 0, s4 = 0;
+static const int servoP1 = 6, servoP2 = 7, servoP3 = 8, servoP4 = 9;
+static int s1 = 0, s2 = 0, s3 = 0, s4 = 0;
 
-int pulseWidthArray[4];
+static int pulseWidthArray[4];
 volatile int PWMIndex = 0;
 
-struct Servo servoArray[4] = 
+static struct Servo servoArray[4] = 
   {
     {servoP1, s1},
     {servoP2, s2},

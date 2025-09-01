@@ -9,17 +9,20 @@ struct Quaternion
 
 class IMU
 {
+  private:
+  
   public:
     void initIMU();
     void updateOrientation();
     void calibrateIMU(int sampleAmount);
 
+    float getPitch();
+    float getRoll();
+    float getYaw();
+
     float getPitchCorrection();
     float getRollCorrection();
     float getYawCorrection();
-
-  private:
-
 };
 
 #endif

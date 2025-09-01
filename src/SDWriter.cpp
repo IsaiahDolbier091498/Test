@@ -2,6 +2,7 @@
 #include "SDWriter.h"
 #include "altimeter.h"
 #include "IMU.h"
+#include "actuators.h"
 #include <SPI.h>
 #include <SdFat.h>
 #include "RingBuf.h"
@@ -11,21 +12,25 @@
 #define LOG_FILENAME "Telemetry.csv"
 #define LOG_FILE_SIZE 100 * 1024 * 1024 // 100 MB
 
-unsigned long lastLogTime = 0;
-unsigned long lastSyncTime = 0;
+static unsigned long lastLogTime = 0;
+static unsigned long lastSyncTime = 0;
 extern volatile bool loggingEnabled;
 
-SdFs sd;
-FsFile file;
+extern IMU BNO08X;
+extern Actuators fins;
+extern Altimeter BMP390;
 
-RingBuf<FsFile, RING_BUF_CAPACITY> rb;
+static SdFs sd;
+static FsFile file;
 
-size_t maxUsed = 0;
+static RingBuf<FsFile, RING_BUF_CAPACITY> rb;
 
-unsigned long syncInterval = 500; // ms
+static size_t maxUsed = 0;
+
+static unsigned long syncInterval = 500; // ms
 
 // Initializes the SD card. Holds in an indefinite loop if the Initialization fails
-void initSDCard()
+void SDWriter::initSDCard()
 {
     Serial.println("Initializing SD card...");
     if (!sd.begin(SD_CONFIG))
@@ -57,7 +62,7 @@ void initSDCard()
 }
 
 // Main function that writes to the SD card. Uses commas as delimiter
-void SDCardWrite(unsigned long timeStamp)
+void SDWriter::SDCardWrite(unsigned long timeStamp)
 {
     size_t n = rb.bytesUsed();
 
@@ -82,10 +87,12 @@ void SDCardWrite(unsigned long timeStamp)
         }
     }
 
-    rb.printf("%.5f,%.5f,%.5f,%.5f,%.5f,%d,%d,%d,%d,%lu\n", relativeAltitude, velocity, adjustedRoll, adjustedPitch, adjustedYaw, s1, s2, s3, s4, timeStamp);
+    rb.printf("%.5f,%.5f,%.5f,%.5f,%.5f,%d,%d,%d,%d,%lu\n", BMP390.getRelativeAltitude(), BMP390.getVelocity(),
+    BNO08X.getRoll(), BNO08X.getPitch(), BNO08X.getYaw(),
+    fins.getS1(), fins.getS2(), fins.getS3(), fins.getS4(), timeStamp);
 }
 
-void logTelemetry(unsigned long ms, unsigned long initTimeTaken, unsigned long interval)
+void SDWriter::logTelemetry(unsigned long ms, unsigned long initTimeTaken, unsigned long interval)
 {
 
     if (!loggingEnabled) return;

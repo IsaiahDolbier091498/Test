@@ -2,6 +2,8 @@
 #include "altimeter.h"
 #include <cstring>
 
+extern Altimeter BMP390;
+
 float avgAltitude = 0;
 
 const int bufferSize = 50;
@@ -29,7 +31,7 @@ float getAvgAlt(bool newData)
 
     if (newData)
     {
-    altitudeBuffer[altBufferIndex] = relativeAltitude;
+    altitudeBuffer[altBufferIndex] = BMP390.getRelativeAltitude();
     altBufferIndex++;
     }
 

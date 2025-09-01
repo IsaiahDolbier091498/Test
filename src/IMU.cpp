@@ -10,31 +10,30 @@
 // --- IMU Config ---
 Adafruit_BNO08x bno08x;
 sh2_SensorValue_t sensorValue;
+extern Altimeter BMP390;
 
-bool isZeroed = false;
-bool isCalibrated = false;
+static bool isZeroed = false;
+static bool isCalibrated = false;
 
-struct Quaternion q_initial = {1, 0, 0, 0};
+static struct Quaternion q_initial = {1, 0, 0, 0};
 
 // --- Control Gain ---
-float Kp = 0.5;
-float Kv = 0.2;
+static const float Kp = 0.5;
+static const float Kv = 0.2;
 
-float adjustedPitch = 0, adjustedRoll = 0, adjustedYaw = 0;
-float filteredPitch = 0, filteredRoll = 0, filteredYaw = 0, filteredAccel = 0;
-int pitchCorrection = 0, rollCorrection = 0, yawCorrection = 0;
+static float pitch, roll, yaw = 0;
+static float filteredPitch, filteredRoll, filteredYaw = 0;
+static int pitchCorrection, rollCorrection, yawCorrection = 0;
 
-float maxDeflectionAngle = 20;
-float deadband = 0.5;
-float norm;
-float accel = 0;
+static const float maxDeflectionAngle = 20;
+static const float deadband = 0.5;
+static float norm;
 
 // Update rate control
-unsigned long lastUpdate = 0;
-const unsigned long updateInterval = 5; // milliseconds - 5 ms is 200 hz
+static const unsigned long updateInterval = 5; // milliseconds - 5 ms is 200 hz
 
 // Low-pass filter coefficient
-float alpha = 0.7;
+static float alpha = 0.7;
 
 // Initialization
 void IMU::initIMU() {  
@@ -82,38 +81,33 @@ void IMU::updateOrientation() {
 
   float sinr_cosp = 2.0 * (q_rel.w * q_rel.x + q_rel.y * q_rel.z);
   float cosr_cosp = 1.0 - 2.0 * (q_rel.x * q_rel.x + q_rel.y * q_rel.y);
-  float roll = atan2(sinr_cosp, cosr_cosp);
+  roll = atan2(sinr_cosp, cosr_cosp);
 
   float sinp = 2.0 * (q_rel.w * q_rel.y - q_rel.z * q_rel.x);
-  float pitch = (abs(sinp) >= 1) ? copysign(PI / 2, sinp) : asin(sinp);
+  pitch = (abs(sinp) >= 1) ? copysign(PI / 2, sinp) : asin(sinp);
 
   float siny_cosp = 2.0 * (q_rel.w * q_rel.z + q_rel.x * q_rel.y);
   float cosy_cosp = 1.0 - 2.0 * (q_rel.y * q_rel.y + q_rel.z * q_rel.z);
-  float yaw = atan2(siny_cosp, cosy_cosp);
+  yaw = atan2(siny_cosp, cosy_cosp);
 
   // Convert to degrees
   roll  *= 180.0 / PI;
   pitch *= 180.0 / PI;
   yaw   *= 180.0 / PI;
 
-  // Axis orientation
-  adjustedPitch = pitch;
-  adjustedRoll  = roll;
-  adjustedYaw   = yaw;
-
   // Low-pass filtering
-  filteredPitch = alpha * filteredPitch + (1 - alpha) * adjustedPitch;
-  filteredRoll  = alpha * filteredRoll  + (1 - alpha) * adjustedRoll;
-  filteredYaw   = alpha * filteredYaw   + (1 - alpha) * adjustedYaw;
+  filteredPitch = alpha * filteredPitch + (1 - alpha) * pitch;
+  filteredRoll  = alpha * filteredRoll  + (1 - alpha) * roll;
+  filteredYaw   = alpha * filteredYaw   + (1 - alpha) * yaw;
 
   if (abs(filteredPitch) < deadband) filteredPitch = 0;
   if (abs(filteredRoll)  < deadband) filteredRoll = 0;
   if (abs(filteredYaw)   < deadband) filteredYaw = 0;
 
   // === Combine Orientation + Velocity into Control ===
-  int pitchCorrection = constrain((Kp * filteredPitch + Kv * velocity), -20, 20);
-  int rollCorrection  = constrain((Kp * filteredRoll), -20, 20);
-  int yawCorrection   = constrain((Kp * filteredYaw), -20, 20);
+  pitchCorrection = constrain((Kp * filteredPitch + Kv * BMP390.getVelocity()), -20, 20);
+  rollCorrection  = constrain((Kp * filteredRoll), -20, 20);
+  yawCorrection   = constrain((Kp * filteredYaw), -20, 20);
 
   //Serial.println(s1);
 
@@ -137,6 +131,21 @@ void IMU::calibrateIMU(int sampleAmount)
   }
   isCalibrated = true;
   Serial.println("IMU calibrated...");
+}
+
+float IMU::getPitch()
+{
+  return filteredPitch;
+}
+
+float IMU::getRoll()
+{
+  return filteredRoll;
+}
+
+float IMU::getYaw()
+{
+  return filteredYaw;
 }
 
 float IMU::getPitchCorrection()

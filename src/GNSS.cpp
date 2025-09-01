@@ -1,19 +1,20 @@
 #include <Wire.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 #include "debug.h"
+#include "GNSS.h"
 
 SFE_UBLOX_GNSS gnss;
-const float alpha = 0.1;
-float filteredLat;
-float filteredLong;
-float latOrigin;
-float longOrigin;
+static const float alpha = 0.1;
+static float filteredLat;
+static float filteredLong;
+static float latOrigin;
+static float longOrigin;
 
-float currentLat;
-float currentLong;
-int fixType;
+static float currentLat;
+static float currentLong;
+static int fixType;
 
-void initGnss()
+void GNSS::initGnss()
 {
     if (!gnss.begin(Wire))
     {
@@ -54,7 +55,7 @@ void initGnss()
     // delay(5000);
 }
 
-void setOrigin(int samples)
+void GNSS::setOrigin(int samples)
 {
     for (int i = 0; i < samples;)
     {
@@ -76,7 +77,7 @@ void setOrigin(int samples)
     Serial.println(longOrigin / 1e7, 8);
 }
 
-void getGnssCoords()
+void GNSS::getGnssCoords()
 {
     if(!gnss.getPVT()) return;
         // Serial.print("Fix type: ");
@@ -93,4 +94,14 @@ void getGnssCoords()
         fixType = gnss.getFixType();
         currentLat = gnss.getLatitude();
         currentLong = gnss.getLongitude();
+}
+
+float GNSS::getOriginLat()
+{
+    return latOrigin / 1e7;
+}
+
+float GNSS::getOriginLong()
+{
+    return longOrigin / 1e7;
 }

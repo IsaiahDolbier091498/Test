@@ -1,15 +1,19 @@
 #ifndef ALTIMETER_H
 #define ALTIMETER_H
-//Exports sensor functions and shared data
+#include <stdint.h>
+class Altimeter
+{
+    private:
+    bool i2c_write_register(uint8_t deviceAddr, uint8_t regAddr, uint8_t value);
+    bool enableBmp390Interrupt();
 
+    public:
+        void initAltimeter();
+        void calibrateAltimeter(int sampleAmount);
+        void updateAltitude();
 
-
-// Expose variables you might want for control logic
-extern float velocity;
-extern float relativeAltitude;
-
-void initSensors();
-void updateAltitude();
-void calibrateAltimeter(int sampleAmount);
+        float getVelocity();
+        float getRelativeAltitude();
+};
 
 #endif

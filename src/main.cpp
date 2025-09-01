@@ -8,16 +8,19 @@
 #include <Wire.h>
 #include "events.h"
 
-const unsigned long logInterval = 40;
+static const unsigned long logInterval = 40;
 
-unsigned long initTimeTaken;
+static unsigned long initTimeTaken;
 
-unsigned long setGNSSFrequency = 100; // ms - 100ms = 10hz
+static const unsigned long setGNSSFrequency = 100; // ms - 100ms = 10hz
 
 volatile bool BMP390DataReady = false;
 
 IMU BNO08X;
+Altimeter BMP390;
+GNSS ZOEM8Q;
 Actuators fins;
+SDWriter sdWriter;
 
 void BMP390Interrupt()
 {
@@ -28,7 +31,6 @@ void BMP390Interrupt()
 void setup() {
   Serial.begin(2000000);
   Serial1.begin(115200);
-
   pinMode(3, INPUT);
   attachInterrupt(digitalPinToInterrupt(3), BMP390Interrupt, FALLING);
 
@@ -46,15 +48,15 @@ void setup() {
   delay(3000); // 60,000 ms set to allow nosecone installation before program runs
 
   Serial.println("Initializing components...");
-  initSensors();
+  BMP390.initAltimeter();
   fins.initServos();
   BNO08X.initIMU();
-  initSDCard();
-  initGnss();
+  sdWriter.initSDCard();
+  ZOEM8Q.initGnss();
   //setOrigin(50);
   Serial.println("Components initialized");
 
-  calibrateAltimeter(100); // Sample amount
+  BMP390.calibrateAltimeter(100); // Sample amount
   BNO08X.calibrateIMU(1000); // Sample amount
 
   nominalStatusLED();
@@ -78,16 +80,16 @@ void loop()
   {
     newDataFlag = true;
     BMP390DataReady = false;
-    updateAltitude();
+    BMP390.updateAltitude();
     Serial.println("True");
   }
 
   //getAvgAlt(newDataFlag);
 
   //updateIMUandServos();
-  //getGnssCoords();
+  //ZOEM8Q.getGnssCoords();
 
-  //logTelemetry(millis(), initTimeTaken, 50);
+  //sdWriter.logTelemetry(millis(), initTimeTaken, logInterval);
 
 
   // unsigned long endTime = micros();
