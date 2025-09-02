@@ -1,9 +1,10 @@
 #include <Wire.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
-#include "debug.h"
+#include "teensy41.h"
 #include "GNSS.h"
 
 SFE_UBLOX_GNSS gnss;
+extern Teensy41 teensy41;
 static const float alpha = 0.1;
 static float filteredLat;
 static float filteredLong;
@@ -19,7 +20,7 @@ void GNSS::initGnss()
     if (!gnss.begin(Wire))
     {
         Serial.println("ZOE-M8Q not found");
-        errorStatusLED();
+        teensy41.setLEDStatus(false);
         while (1);
     }
 

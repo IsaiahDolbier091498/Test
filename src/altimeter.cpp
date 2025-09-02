@@ -1,10 +1,11 @@
 #include "altimeter.h"
 #include <Adafruit_BMP3XX.h>
 #include <Wire.h>
-#include "debug.h"
+#include "teensy41.h"
 
 // --- Altimeter ---
 Adafruit_BMP3XX bmp;
+extern Teensy41 teensy41;
 #define BMP390_I2C_ADDR 0x77
 
 static const float seaLevelPressure = 1013.25; // in hPa
@@ -145,7 +146,7 @@ bool Altimeter::enableBmp390Interrupt() {
 void Altimeter::initAltimeter() {
   if (!bmp.begin_I2C(0x77, &Wire1)) {
     Serial.println("BMP390 not found!");
-    errorStatusLED();
+    teensy41.setLEDStatus(false);
     while (1);
   }
 
@@ -155,7 +156,7 @@ void Altimeter::initAltimeter() {
   bmp.setOutputDataRate(BMP3_ODR_200_HZ);
   delay(100);
 
-  if (!enableBmp390Interrupt()) 
+  if (!enableBmp390Interrupt())
   {
     Serial.println("Failed to enable BMP390 interrupt!");
     while (1);
@@ -199,7 +200,7 @@ Output variables:
 
 
 updateAltitude():
-- if (!bmp.performReading()) return; 
+- if (!bmp.performReading()) return;
   function only runs when the sensor successfully provides a new reading
 
 - float pressure = bmp.pressure / 100.0;

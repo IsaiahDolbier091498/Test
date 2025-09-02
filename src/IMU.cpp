@@ -2,7 +2,7 @@
 #include "altimeter.h"
 #include <Adafruit_BNO08x.h>
 #include <math.h>
-#include "debug.h"
+#include "teensy41.h"
 #include <algorithm>
 
 // Handles altitude estimation and control surface logic
@@ -11,6 +11,7 @@
 Adafruit_BNO08x bno08x;
 sh2_SensorValue_t sensorValue;
 extern Altimeter BMP390;
+extern Teensy41 teensy41;
 
 static bool isZeroed = false;
 static bool isCalibrated = false;
@@ -36,10 +37,10 @@ static const unsigned long updateInterval = 5; // milliseconds - 5 ms is 200 hz
 static float alpha = 0.7;
 
 // Initialization
-void IMU::initIMU() {  
+void IMU::initIMU() {
   if (!bno08x.begin_I2C(0x4A, &Wire1)) {
     Serial.println("BNO08x not found");
-    errorStatusLED();
+    teensy41.setLEDStatus(false);
     while (1);
   }
   bno08x.enableReport(SH2_GAME_ROTATION_VECTOR, 5000);

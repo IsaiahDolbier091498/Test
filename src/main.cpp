@@ -3,7 +3,7 @@
 #include "IMU.h"
 #include "actuators.h"
 #include "SDWriter.h"
-#include "debug.h"
+#include "teensy41.h"
 #include "GNSS.h"
 #include <Wire.h>
 #include "events.h"
@@ -16,6 +16,7 @@ static const unsigned long setGNSSFrequency = 100; // ms - 100ms = 10hz
 
 volatile bool BMP390DataReady = false;
 
+Teensy41 teensy41;
 IMU BNO08X;
 Altimeter BMP390;
 GNSS ZOEM8Q;
@@ -36,8 +37,8 @@ void setup() {
 
   delay(3000);
   Serial.printf("CPU speed: %lu MHz\n", F_CPU / 1000000);
-  measureBattery();
-  checkI2CLines();
+  teensy41.measureBattery();
+  teensy41.checkI2CLines();
 
   Wire.begin();
   Wire.setClock(400000);
@@ -59,7 +60,7 @@ void setup() {
   BMP390.calibrateAltimeter(100); // Sample amount
   BNO08X.calibrateIMU(1000); // Sample amount
 
-  nominalStatusLED();
+  teensy41.setLEDStatus(true);
   Serial.println("System ready");
   initTimeTaken = millis();
 }
@@ -70,7 +71,7 @@ void setup() {
 // unsigned long totalTime = 0;
 // int loopCount = 0;
 
-void loop() 
+void loop()
 {
   //unsigned long startTime = micros();
 

@@ -1,9 +1,6 @@
 #ifndef GNSS_H
 #define GNSS_H
 
-float originLat;
-float OriginLong;
-
 class GNSS
 {
     private:

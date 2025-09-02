@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "SDWriter.h"
+#include "teensy41.h"
 #include "altimeter.h"
 #include "IMU.h"
 #include "actuators.h"
@@ -16,6 +17,7 @@ static unsigned long lastLogTime = 0;
 static unsigned long lastSyncTime = 0;
 extern volatile bool loggingEnabled;
 
+extern Teensy41 teensy41;
 extern IMU BNO08X;
 extern Actuators fins;
 extern Altimeter BMP390;
@@ -36,6 +38,7 @@ void SDWriter::initSDCard()
     if (!sd.begin(SD_CONFIG))
     {
         Serial.println("Insert/check SD card");
+        teensy41.setLEDStatus(false);
         while (1);
     }
 
@@ -66,14 +69,14 @@ void SDWriter::SDCardWrite(unsigned long timeStamp)
 {
     size_t n = rb.bytesUsed();
 
-    if ((n + file.curPosition()) > (LOG_FILE_SIZE - 20)) 
+    if ((n + file.curPosition()) > (LOG_FILE_SIZE - 20))
     {
       Serial.println("File full - quitting.");
       loggingEnabled = false;
       return;
     }
 
-    if (n > maxUsed) 
+    if (n > maxUsed)
     {
       maxUsed = n;
     }
@@ -97,7 +100,7 @@ void SDWriter::logTelemetry(unsigned long ms, unsigned long initTimeTaken, unsig
 
     if (!loggingEnabled) return;
 
-    if (rb.getWriteError()) 
+    if (rb.getWriteError())
     {
     Serial.println("RingBuf writing error");
     rb.clearWriteError();

@@ -11,9 +11,9 @@ static const int servoP1 = 6, servoP2 = 7, servoP3 = 8, servoP4 = 9;
 static int s1 = 0, s2 = 0, s3 = 0, s4 = 0;
 
 static int pulseWidthArray[4];
-volatile int PWMIndex = 0;
+static volatile int PWMIndex = 0;
 
-static struct Servo servoArray[4] = 
+static struct Servo servoArray[4] =
   {
     {servoP1, s1},
     {servoP2, s2},
@@ -78,12 +78,12 @@ void Actuators::stopPulse()
 void Actuators::startPulse()
 {
   std::sort(servoArray, servoArray + 4, sortByPin);
-  
+
   servoArray[0].angle = s1;
   servoArray[1].angle = s2;
   servoArray[2].angle = s3;
   servoArray[3].angle = s4;
-  
+
   std::sort(servoArray, servoArray + 4, sortByAngle);
   for (int i = 0; i < 4; i++)
   {
@@ -98,22 +98,22 @@ void Actuators::startPulse()
   stopTimer.begin(stopPulse, pulseWidthArray[PWMIndex]);
 }
 
-int Actuators::getS1() 
+int Actuators::getS1()
 {
   return s1;
 }
 
-int Actuators::getS2() 
+int Actuators::getS2()
 {
   return s2;
 }
 
-int Actuators::getS3() 
+int Actuators::getS3()
 {
   return s3;
 }
 
-int Actuators::getS4() 
+int Actuators::getS4()
 {
   return s4;
 }

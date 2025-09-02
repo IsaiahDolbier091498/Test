@@ -2,12 +2,12 @@
 #include <SPI.h>
 #include <SD.h>
 #include <Wire.h>
-#include "debug.h"
+#include "teensy41.h"
 
 volatile bool loggingEnabled = true;
 
 // Resets teensy 4.1
-void reset()
+void Teensy41::reset()
 {
   // Shuts down SDWriter
   loggingEnabled = false;
@@ -24,7 +24,7 @@ void reset()
 }
 
 // Resets IMU as it is one of the main culprits that jams the I2C line low
-void resetBNO085()
+void Teensy41::resetBNO085()
 {
   pinMode(2, OUTPUT);
   digitalWrite(2, LOW);
@@ -34,7 +34,7 @@ void resetBNO085()
 }
 
 // Checks / resets I2C line. High status is normal and low means the I2C line is stuck and needs to be rebooted
-void checkI2CLines()
+void Teensy41::checkI2CLines()
 {
   Wire.end();
   Wire1.end();
@@ -96,11 +96,11 @@ void checkI2CLines()
     Serial.printf("SDA1: %s\n", sda1 ? "HIGH" : "LOW");
   }
 
-  delay(50); 
+  delay(50);
 }
 
 // Helper function for measureBattery. returns text status
-const char* batteryStatus(float percentage)
+const char* Teensy41::batteryStatus(float percentage)
 {
   if (percentage >= 95.0) return "FULL";
   if (percentage >= 70.0) return "HIGH";
@@ -110,7 +110,7 @@ const char* batteryStatus(float percentage)
 }
 
 // Reads voltage from the main battery using voltage divider circuit
-void measureBattery()
+void Teensy41::measureBattery()
 {
   float maxLipoCharge = 8.4;
   float minLipoCharge = 6.0;
@@ -123,7 +123,7 @@ void measureBattery()
   {
     voltageOut += analogRead(A10) * (3.3 / 1023.0); // A10 is pin 24
     delay(2);
-  } 
+  }
   voltageOut /= 10.0;
   float voltageIn = (voltageOut * (resistor1 + resistor2)) / resistor2;
 
@@ -133,32 +133,50 @@ void measureBattery()
   Serial.printf("Main Battery Voltage: %.2fV ~ %.1f%% -> %s\n", voltageIn, percentage, batteryStatus(percentage));
 }
 
+void Teensy41::ejectionChargeMain()
+{
+    pinMode(31, INPUT);
+    digitalWrite(31, HIGH);
+    delay(5000);
+    digitalWrite(31, LOW);
+}
+
+void Teensy41::ejectionChargeBackup()
+{
+    pinMode(34, INPUT);
+    digitalWrite(34, HIGH);
+    delay(5000);
+    digitalWrite(34, LOW);
+}
+
 // Checks the fault flag of the main ejection charge driver (MIC2544) - pulls low to indicate over current or thermal shutdown
-void checkMIC2544MainFlag()
+void Teensy41::checkMIC2544MainFlag()
 {
   pinMode(32, INPUT);
   float faultFlag = digitalRead(32);
-  Serial.printf("MIC2544 Main Fault Flag: %s\n", faultFlag ? "INACTIVE" : "ACTIVE"); // Inactive good - active bad :(
+  Serial.printf("MIC2544 Main Fault Flag: %s\n", faultFlag ? "INACTIVE" : "ACTIVE"); // Inactive good - active bad
 }
 
 // Checks the fault flag of the backup ejection charge driver (MIC2544) - pulls low to indicate over current or thermal shutdown
-void checkMIC2544BackupFlag()
+void Teensy41::checkMIC2544BackupFlag()
 {
   pinMode(33, INPUT);
   float faultFlag = digitalRead(33);
-  Serial.printf("MIC2544 Backup Fault Flag: %s\n", faultFlag ? "INACTIVE" : "ACTIVE"); // Inactive good - active bad :(
+  Serial.printf("MIC2544 Backup Fault Flag: %s\n", faultFlag ? "INACTIVE" : "ACTIVE"); // Inactive good - active bad
 }
 
-// Turns on green LED to indicate everything is performing as expected
-void nominalStatusLED()
+void Teensy41::setLEDStatus(bool nominal)
 {
-  pinMode(35, OUTPUT);
-  digitalWrite(35, LOW); // Pull low to turn on common anode LED
-}
-
-// Turns on red LED to indicate sensor or other module isn't working
-void errorStatusLED()
-{
-  pinMode(36, OUTPUT);
-  digitalWrite(36, LOW); // Pull low to turn on common anode LED
+  if (nominal)
+  {
+    // Turns on green LED to indicate everything is performing as expected
+    pinMode(35, OUTPUT);
+    digitalWrite(35, LOW); // Pull low to turn on common anode LED
+  }
+  else
+  {
+    // Turns on red LED to indicate sensor or other module isn't working
+    pinMode(36, OUTPUT);
+    digitalWrite(36, LOW); // Pull low to turn on common anode LED
+  }
 }
