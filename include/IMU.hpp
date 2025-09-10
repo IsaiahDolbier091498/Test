@@ -16,12 +16,12 @@ struct PID {
 class IMU
 {
   private:
+  float updatePID(PID &pid, float setpoint, float measurement, float dt);
 
   public:
     void resetBNO085();
     void initIMU();
     void updateOrientation();
-    float updatePID(PID &pid, float setpoint, float measurement, float dt);
     void calibrateIMU(int sampleAmount);
 
     float getPitch();
