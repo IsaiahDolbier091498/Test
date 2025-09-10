@@ -1,12 +1,13 @@
-#include "altimeter.h"
+#include "altimeter.hpp"
 #include <Adafruit_BMP3XX.h>
 #include <Wire.h>
-#include "teensy41.h"
+#include "teensy41.hpp"
 
 // --- Altimeter ---
-Adafruit_BMP3XX bmp;
-extern Teensy41 teensy41;
 #define BMP390_I2C_ADDR 0x77
+Adafruit_BMP3XX bmp;
+
+extern Teensy41 teensy41;
 
 static const float seaLevelPressure = 1013.25; // in hPa
 static const float pressureExponent = 0.190284;
@@ -19,7 +20,8 @@ static unsigned long lastTime = 0;
 
 // Kalman state variables
 float state[2] = {0.0, 0.0}; // state[0] = altitude, state[1] = velocity
-float covariance[2][2] = {
+float covariance[2][2] =
+{
   {1.0, 0.0},
   {0.0, 1.0}
 };
@@ -37,7 +39,8 @@ static float initialAltitude = 0.0;
 static int filterCount = 0;
 
 // Runs the 2 state Kalman filter to get altitude and velocity
-void Altimeter::updateAltitude() {
+void Altimeter::updateAltitude()
+{
 
   float pressure = bmp.readPressure();
   if(isnan(pressure)) return;
@@ -87,7 +90,8 @@ void Altimeter::updateAltitude() {
   filterCount++;
 
   // Set baseline after stable reading
-  if (!initialAltitudeSet && filterCount >= samples) {
+  if (!initialAltitudeSet && filterCount >= samples)
+  {
     initialAltitude = filteredAltitude;
     initialAltitudeSet = true;
     Serial.println("Initial altitude set...");
@@ -96,7 +100,8 @@ void Altimeter::updateAltitude() {
   relativeAltitude = filteredAltitude - initialAltitude;
 
   // Adjusts for drift when stationary
-  if (state[1] < 0.6 && filterCount > samples && launchDetected == false) {
+  if (state[1] < 0.6 && filterCount > samples && launchDetected == false)
+  {
   drift = filteredAltitude - initialAltitude;
   initialAltitude += drift * 0.2;
   }
@@ -122,14 +127,16 @@ void Altimeter::calibrateAltimeter(int sampleAmount)
 
 // Writes command to the register. In this case it's to enable the interrupt pin
 // Using the interrupt pin allows the sensor to be read only when ready. performReading() is blocking.
-bool Altimeter::i2c_write_register(uint8_t deviceAddr, uint8_t regAddr, uint8_t value) {
+bool Altimeter::i2c_write_register(uint8_t deviceAddr, uint8_t regAddr, uint8_t value)
+{
   Wire1.beginTransmission(deviceAddr);
   Wire1.write(regAddr);
   Wire1.write(value);
   return Wire1.endTransmission() == 0; // returns true if successful
 }
 
-bool Altimeter::enableBmp390Interrupt() {
+bool Altimeter::enableBmp390Interrupt()
+{
   const uint8_t int_ctrl_reg = 0x19;
   const uint8_t config = 0x40;
 
@@ -143,8 +150,10 @@ bool Altimeter::enableBmp390Interrupt() {
 }
 
 // Initializes I2C and sensor
-void Altimeter::initAltimeter() {
-  if (!bmp.begin_I2C(0x77, &Wire1)) {
+void Altimeter::initAltimeter()
+{
+  if (!bmp.begin_I2C(0x77, &Wire1))
+  {
     Serial.println("BMP390 not found!");
     teensy41.setLEDStatus(false);
     while (1);

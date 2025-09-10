@@ -1,15 +1,16 @@
-#include "IMU.h"
-#include "altimeter.h"
+#include "IMU.hpp"
+#include "altimeter.hpp"
 #include <Adafruit_BNO08x.h>
 #include <math.h>
-#include "teensy41.h"
-#include <algorithm>
+#include "teensy41.hpp"
 
 // Handles altitude estimation and control surface logic
 
 // --- IMU Config ---
+#define BNO08X_I2C_ADDR 0x4A
 Adafruit_BNO08x bno08x;
 sh2_SensorValue_t sensorValue;
+
 extern Altimeter BMP390;
 extern Teensy41 teensy41;
 
@@ -36,17 +37,30 @@ static const unsigned long updateInterval = 5; // milliseconds - 5 ms is 200 hz
 // Low-pass filter coefficient
 static float alpha = 0.7;
 
+// Resets IMU as it is one of the main culprits that jams the I2C line low
+void IMU::resetBNO085()
+{
+  pinMode(2, OUTPUT);
+  digitalWrite(2, LOW);
+  delay(1000);
+  digitalWrite(2, HIGH);
+  delay(2000);
+}
+
 // Initialization
-void IMU::initIMU() {
-  if (!bno08x.begin_I2C(0x4A, &Wire1)) {
+void IMU::initIMU()
+{
+  if (!bno08x.begin_I2C(BNO08X_I2C_ADDR, &Wire1)) {
     Serial.println("BNO08x not found");
     teensy41.setLEDStatus(false);
     while (1);
   }
+
   bno08x.enableReport(SH2_GAME_ROTATION_VECTOR, 5000);
 }
 
-void IMU::updateOrientation() {
+void IMU::updateOrientation()
+{
   if (!bno08x.getSensorEvent(&sensorValue)) return;
 
   float q0 = sensorValue.un.gameRotationVector.real;

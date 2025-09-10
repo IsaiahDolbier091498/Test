@@ -1,12 +1,12 @@
 #include <Arduino.h>
-#include "altimeter.h"
-#include "IMU.h"
-#include "actuators.h"
-#include "SDWriter.h"
-#include "teensy41.h"
-#include "GNSS.h"
+#include "altimeter.hpp"
+#include "IMU.hpp"
+#include "actuators.hpp"
+#include "SDWriter.hpp"
+#include "teensy41.hpp"
+#include "GNSS.hpp"
 #include <Wire.h>
-#include "events.h"
+#include "events.hpp"
 
 static const unsigned long logInterval = 40;
 

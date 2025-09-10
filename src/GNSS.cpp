@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
-#include "teensy41.h"
-#include "GNSS.h"
+#include "teensy41.hpp"
+#include "GNSS.hpp"
 
 SFE_UBLOX_GNSS gnss;
 extern Teensy41 teensy41;

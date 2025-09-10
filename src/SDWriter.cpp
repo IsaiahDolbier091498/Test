@@ -1,9 +1,9 @@
 #include <Arduino.h>
-#include "SDWriter.h"
-#include "teensy41.h"
-#include "altimeter.h"
-#include "IMU.h"
-#include "actuators.h"
+#include "SDWriter.hpp"
+#include "teensy41.hpp"
+#include "altimeter.hpp"
+#include "IMU.hpp"
+#include "actuators.hpp"
 #include <SPI.h>
 #include <SdFat.h>
 #include "RingBuf.h"

@@ -2,7 +2,7 @@
 #define IMU_H
 //Exports control functions
 
-struct Quaternion 
+struct Quaternion
 {
   float w, x, y, z;
 };
@@ -10,8 +10,9 @@ struct Quaternion
 class IMU
 {
   private:
-  
+
   public:
+    void resetBNO085();
     void initIMU();
     void updateOrientation();
     void calibrateIMU(int sampleAmount);

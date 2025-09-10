@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "altimeter.h"
+#include "altimeter.hpp"
 #include <cstring>
 
 extern Altimeter BMP390;

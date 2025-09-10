@@ -9,7 +9,6 @@ class Teensy41
     public:
     void reset();
     void checkI2CLines();
-    void resetBNO085();
     void measureBattery();
 
     void checkMIC2544MainFlag();

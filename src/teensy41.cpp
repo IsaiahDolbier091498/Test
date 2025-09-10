@@ -2,7 +2,10 @@
 #include <SPI.h>
 #include <SD.h>
 #include <Wire.h>
-#include "teensy41.h"
+#include "IMU.hpp"
+#include "teensy41.hpp"
+
+extern IMU BNO08X;
 
 volatile bool loggingEnabled = true;
 
@@ -23,16 +26,6 @@ void Teensy41::reset()
   SCB_AIRCR = 0x05FA0004;
 }
 
-// Resets IMU as it is one of the main culprits that jams the I2C line low
-void Teensy41::resetBNO085()
-{
-  pinMode(2, OUTPUT);
-  digitalWrite(2, LOW);
-  delay(1000);
-  digitalWrite(2, HIGH);
-  delay(2000);
-}
-
 // Checks / resets I2C line. High status is normal and low means the I2C line is stuck and needs to be rebooted
 void Teensy41::checkI2CLines()
 {
@@ -40,9 +33,10 @@ void Teensy41::checkI2CLines()
   Wire1.end();
 
   Serial.println("Resetting IMU...");
-  resetBNO085();
+  BNO08X.resetBNO085();
 
   Serial.println("Checking I2C lines...");
+
   pinMode(19, INPUT_PULLUP);
   pinMode(18, INPUT_PULLUP);
   pinMode(17, INPUT_PULLUP);

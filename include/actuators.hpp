@@ -3,14 +3,14 @@
 
 struct Servo {
   int pin;
-  int angle;
+  float angle;
 };
 
 class Actuators
 {
   private:
-    static int pulseWidth(int servoAngle);
-  
+    static int pulseWidth(float servoAngle);
+
     static bool sortByAngle(Servo &a, Servo &b);
     static bool sortByPin(Servo &a, Servo &b);
 
@@ -20,7 +20,7 @@ class Actuators
   public:
     void initServos();
     void updateAngles();
-    
+
     int getS1();
     int getS2();
     int getS3();
