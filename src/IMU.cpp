@@ -4,8 +4,6 @@
 #include <math.h>
 #include "teensy41.hpp"
 
-// Handles altitude estimation and control surface logic
-
 // --- IMU Config ---
 #define BNO08X_I2C_ADDR 0x4A
 Adafruit_BNO08x bno08x;
@@ -19,10 +17,15 @@ static bool isCalibrated = false;
 
 static struct Quaternion q_initial = {1, 0, 0, 0};
 
-// --- Control Gain ---
-static const float Kp = 0.5;
-static const float Kv = 0.2;
+// Initialize PID for pitch, roll, yaw
+static struct PID pidPitch = {0.5, 0.0, 0.2, 0, 0};
+static struct PID pidRoll  = {0.5, 0.0, 0.2, 0, 0};
+static struct PID pidYaw   = {0.5, 0.0, 0.2, 0, 0};
 
+// Update timing
+static unsigned long lastUpdate = 0;
+
+// Orientation filters / variables
 static float pitch, roll, yaw = 0;
 static float filteredPitch, filteredRoll, filteredYaw = 0;
 static int pitchCorrection, rollCorrection, yawCorrection = 0;
@@ -57,6 +60,22 @@ void IMU::initIMU()
   }
 
   bno08x.enableReport(SH2_GAME_ROTATION_VECTOR, 5000);
+}
+
+// --- PID update helper ---
+float IMU::updatePID(PID &pid, float setpoint, float measurement, float dt) {
+  float error = setpoint - measurement;
+
+  // Integrate error with anti-windup
+  pid.integral += error * dt;
+  pid.integral = constrain(pid.integral, -50, 50);
+
+  // Derivative
+  float derivative = (error - pid.prevError) / dt;
+  pid.prevError = error;
+
+  // PID output
+  return pid.Kp * error + pid.Ki * pid.integral + pid.Kd * derivative;
 }
 
 void IMU::updateOrientation()
@@ -119,10 +138,22 @@ void IMU::updateOrientation()
   if (abs(filteredRoll)  < deadband) filteredRoll = 0;
   if (abs(filteredYaw)   < deadband) filteredYaw = 0;
 
+  // --- Calculate delta time for PID ---
+  unsigned long now = millis();
+  float dt = (now - lastUpdate) / 1000.0;
+  if (dt <= 0) dt = 0.005;  // avoid zero if called faster than expected
+  lastUpdate = now;
+
+  // --- Update PID controllers ---
+  pitchCorrection = updatePID(pidPitch, 0.0, filteredPitch, dt);
+  rollCorrection  = updatePID(pidRoll,  0.0, filteredRoll,  dt);
+  yawCorrection   = updatePID(pidYaw,   0.0, filteredYaw,   dt);
+
   // === Combine Orientation + Velocity into Control ===
-  pitchCorrection = constrain((Kp * filteredPitch + Kv * BMP390.getVelocity()), -20, 20);
-  rollCorrection  = constrain((Kp * filteredRoll), -20, 20);
-  yawCorrection   = constrain((Kp * filteredYaw), -20, 20);
+  pitchCorrection = constrain(pitchCorrection, -maxDeflectionAngle, maxDeflectionAngle);
+  rollCorrection  = constrain(rollCorrection,  -maxDeflectionAngle, maxDeflectionAngle);
+  yawCorrection   = constrain(yawCorrection,   -maxDeflectionAngle, maxDeflectionAngle);
+
 
   //Serial.println(s1);
 

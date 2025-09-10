@@ -7,6 +7,12 @@ struct Quaternion
   float w, x, y, z;
 };
 
+struct PID {
+  float Kp, Ki, Kd;        // gains
+  float integral;          // accumulated error
+  float prevError;         // last error for derivative
+};
+
 class IMU
 {
   private:
@@ -15,6 +21,7 @@ class IMU
     void resetBNO085();
     void initIMU();
     void updateOrientation();
+    float updatePID(PID &pid, float setpoint, float measurement, float dt);
     void calibrateIMU(int sampleAmount);
 
     float getPitch();
