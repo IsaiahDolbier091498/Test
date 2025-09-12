@@ -10,12 +10,18 @@
 
 #define SD_CONFIG SdioConfig(FIFO_SDIO)
 #define RING_BUF_CAPACITY 8192
-#define LOG_FILENAME "Telemetry.csv"
-#define LOG_FILE_SIZE 100 * 1024 * 1024 // 100 MB
+#define TELEMETRY_FILENAME "Telemetry.csv"
+#define TELEMETRY_FILE_SIZE 100 * 1024 * 1024 // 100 MB
+#define LOG_FILENAME "Log.txt"
+#define LOG_FILE_SIZE 1 * 1024 // 25 kb
+
+const int LOGBUFFSIZE = 1 * 1024; // 1 kb
+char logBuffer[LOGBUFFSIZE];
 
 static unsigned long lastLogTime = 0;
 static unsigned long lastSyncTime = 0;
 extern volatile bool loggingEnabled;
+extern bool debugMode;
 
 extern Teensy41 teensy41;
 extern IMU BNO08X;
@@ -23,7 +29,8 @@ extern Actuators fins;
 extern Altimeter BMP390;
 
 static SdFs sd;
-static FsFile file;
+static FsFile telemetryFile;
+static FsFile logFile;
 
 static RingBuf<FsFile, RING_BUF_CAPACITY> rb;
 
@@ -42,25 +49,36 @@ void SDWriter::initSDCard()
         while (1);
     }
 
-    if (!file.open(LOG_FILENAME, O_WRONLY | O_CREAT | O_AT_END))
+    if (!telemetryFile.open(TELEMETRY_FILENAME, O_WRONLY | O_CREAT | O_AT_END))
     {
-        Serial.println("File open failed...");
+        Serial.println("Telemetry file open failed...");
         while (1);
     }
 
-    if (file.size() == 0)
+    if (telemetryFile.size() == 0)
     {
-        if (!file.preAllocate(LOG_FILE_SIZE))
+        if (!telemetryFile.preAllocate(TELEMETRY_FILE_SIZE))
         {
-            Serial.println("preallocation failed...");
-            file.close();
+            Serial.println("Telemetry file preallocation failed...");
+            telemetryFile.close();
             while (1);
         }
 
-        file.println("Altitude (m),Velocity (m/s),Roll (deg),Pitch (deg),Yaw (deg),Servo1 (deg),Servo2 (deg),Servo3 (deg),Servo4 (deg),Timestamp (milliseconds)");
+        telemetryFile.println("Altitude (m),Velocity (m/s),Roll (deg),Pitch (deg),Yaw (deg),Servo1 (deg),Servo2 (deg),Servo3 (deg),Servo4 (deg),Timestamp (milliseconds)");
     }
 
-    rb.begin(&file);
+    if (!logFile.open(LOG_FILENAME, O_WRONLY | O_CREAT | O_AT_END))
+    {
+        Serial.println("Log file open failed...");
+        while (1);
+    }
+
+    if (logFile.size() == 0)
+    {
+        logFile.println("Avionics initialization log: ");
+        logFile.close();
+    }
+    rb.begin(&telemetryFile);
     Serial.println("SD card initialization complete");
 }
 
@@ -69,7 +87,7 @@ void SDWriter::SDCardWrite(unsigned long timeStamp)
 {
     size_t n = rb.bytesUsed();
 
-    if ((n + file.curPosition()) > (LOG_FILE_SIZE - 20))
+    if ((n + telemetryFile.curPosition()) > (TELEMETRY_FILE_SIZE - 20))
     {
       Serial.println("File full - quitting.");
       loggingEnabled = false;
@@ -81,7 +99,7 @@ void SDWriter::SDCardWrite(unsigned long timeStamp)
       maxUsed = n;
     }
 
-    if (n >= 512 && !file.isBusy())
+    if (n >= 512 && !telemetryFile.isBusy())
     {
         if (512 != rb.writeOut(512))
         {
@@ -118,7 +136,7 @@ void SDWriter::logTelemetry(unsigned long ms, unsigned long initTimeTaken, unsig
     if (rb.bytesUsed() > RING_BUF_CAPACITY * 0.75)
     {
         rb.sync();
-        file.sync();
+        telemetryFile.sync();
         lastSyncTime = now;
         alreadySynced = true;
     }
@@ -126,7 +144,14 @@ void SDWriter::logTelemetry(unsigned long ms, unsigned long initTimeTaken, unsig
     if (!alreadySynced && (now - lastSyncTime >= syncInterval))
     {
         rb.sync();
-        file.sync();
+        telemetryFile.sync();
         lastSyncTime = now;
     }
+}
+
+void logAvionicsInit(const char* line)
+{
+
+    if (!debugMode) return;
+    Serial.println(line);
 }
