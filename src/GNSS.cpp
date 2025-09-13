@@ -2,6 +2,7 @@
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 #include "teensy41.hpp"
 #include "GNSS.hpp"
+#include "SDWriter.hpp"
 
 SFE_UBLOX_GNSS gnss;
 extern Teensy41 teensy41;
@@ -19,12 +20,11 @@ void GNSS::initGnss()
 {
     if (!gnss.begin(Wire))
     {
-        Serial.println("ZOE-M8Q not found");
+        log("ZOE-M8Q not found");
         teensy41.setLEDStatus(false);
         while (1);
     }
-
-    Serial.println("GNSS initialized");
+    log("GNSS initialized");
 
     gnss.setNavigationFrequency(10);
     gnss.setUART1Output(0);
@@ -71,11 +71,8 @@ void GNSS::setOrigin(int samples)
     latOrigin = filteredLat;
     longOrigin = filteredLong;
 
-    Serial.print("Lat origin: ");
-    Serial.println(latOrigin / 1e7, 8);
-
-    Serial.print("Long origin: ");
-    Serial.println(longOrigin / 1e7, 8);
+    log("Lat origin: %.8f", latOrigin / 1e7);
+    log("Long origin: %.8f", longOrigin / 1e7);
 }
 
 void GNSS::getGnssCoords()

@@ -3,6 +3,7 @@
 #include <Adafruit_BNO08x.h>
 #include <math.h>
 #include "teensy41.hpp"
+#include "SDWriter.hpp"
 
 // --- IMU Config ---
 #define BNO08X_I2C_ADDR 0x4A
@@ -11,6 +12,7 @@ sh2_SensorValue_t sensorValue;
 
 extern Altimeter BMP390;
 extern Teensy41 teensy41;
+extern bool debugMode;
 
 static bool isZeroed = false;
 static bool isCalibrated = false;
@@ -28,7 +30,7 @@ static unsigned long lastUpdate = 0;
 // Orientation filters / variables
 static float pitch, roll, yaw = 0;
 static float filteredPitch, filteredRoll, filteredYaw = 0;
-static int pitchCorrection, rollCorrection, yawCorrection = 0;
+static float pitchCorrection, rollCorrection, yawCorrection = 0;
 
 static const float maxDeflectionAngle = 20;
 static const float deadband = 0.5;
@@ -54,7 +56,7 @@ void IMU::resetBNO085()
 void IMU::initIMU()
 {
   if (!bno08x.begin_I2C(BNO08X_I2C_ADDR, &Wire1)) {
-    Serial.println("BNO08x not found");
+    log("BNO08x not found");
     teensy41.setLEDStatus(false);
     while (1);
   }
@@ -100,8 +102,8 @@ void IMU::updateOrientation()
   if (!isZeroed) {
     q_initial = q_current;
     isZeroed = true;
-    Serial.println("IMU orientation zeroed.");
-    Serial.println("Calibrating IMU...");
+    log("IMU orientation zeroed.");
+    log("Calibrating IMU...");
     return;
   }
 
@@ -134,9 +136,9 @@ void IMU::updateOrientation()
   filteredRoll  = alpha * filteredRoll  + (1 - alpha) * roll;
   filteredYaw   = alpha * filteredYaw   + (1 - alpha) * yaw;
 
-  if (abs(filteredPitch) < deadband) filteredPitch = 0;
-  if (abs(filteredRoll)  < deadband) filteredRoll = 0;
-  if (abs(filteredYaw)   < deadband) filteredYaw = 0;
+  // if (abs(filteredPitch) < deadband) filteredPitch = 0;
+  // if (abs(filteredRoll)  < deadband) filteredRoll = 0;
+  // if (abs(filteredYaw)   < deadband) filteredYaw = 0;
 
   // --- Calculate delta time for PID ---
   unsigned long now = millis();
@@ -154,17 +156,14 @@ void IMU::updateOrientation()
   rollCorrection  = constrain(rollCorrection,  -maxDeflectionAngle, maxDeflectionAngle);
   yawCorrection   = constrain(yawCorrection,   -maxDeflectionAngle, maxDeflectionAngle);
 
-
-  //Serial.println(s1);
-
   // Serial debugging -- comment out before launch
-  // if (isCalibrated == true)
+  // if (isCalibrated == true && debugMode)
   // {
-  // Serial.print("Pitch: "); Serial.print(filteredPitch);
-  // Serial.print(" | Roll: "); Serial.print(filteredRoll);
-  // Serial.print(" | Yaw: "); Serial.print(filteredYaw);
-  // Serial.print(" | Vel: "); Serial.print(velocity);
-  // Serial.print(" | Alt: "); Serial.println(relativeAltitude);
+  //   Serial.print("Pitch: "); Serial.print(filteredPitch);
+  //   Serial.print(" | Roll: "); Serial.print(filteredRoll);
+  //   Serial.print(" | Yaw: "); Serial.print(filteredYaw);
+  //   Serial.print(" | Vel: "); Serial.print(BMP390.getVelocity());
+  //   Serial.print(" | Alt: "); Serial.println(BMP390.getRelativeAltitude());
   // }
 }
 
@@ -176,7 +175,7 @@ void IMU::calibrateIMU(int sampleAmount)
     delay(5);
   }
   isCalibrated = true;
-  Serial.println("IMU calibrated...");
+  log("IMU calibrated...");
 }
 
 float IMU::getPitch()

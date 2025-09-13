@@ -2,6 +2,7 @@
 #include <Adafruit_BMP3XX.h>
 #include <Wire.h>
 #include "teensy41.hpp"
+#include "SDWriter.hpp"
 
 // --- Altimeter ---
 #define BMP390_I2C_ADDR 0x77
@@ -41,7 +42,6 @@ static int filterCount = 0;
 // Runs the 2 state Kalman filter to get altitude and velocity
 void Altimeter::updateAltitude()
 {
-
   float pressure = bmp.readPressure();
   if(isnan(pressure)) return;
 
@@ -94,7 +94,7 @@ void Altimeter::updateAltitude()
   {
     initialAltitude = filteredAltitude;
     initialAltitudeSet = true;
-    Serial.println("Initial altitude set...");
+    log("Initial altitude set...");
   }
 
   relativeAltitude = filteredAltitude - initialAltitude;
@@ -116,7 +116,7 @@ void Altimeter::updateAltitude()
 
 void Altimeter::calibrateAltimeter(int sampleAmount)
 {
-  Serial.println("Calibrating altimeter...");
+  log("Calibrating altimeter...");
   samples = sampleAmount;
   for (int i = 0; i < sampleAmount; i++)
   {
@@ -141,11 +141,11 @@ bool Altimeter::enableBmp390Interrupt()
   const uint8_t config = 0x40;
 
   if (!i2c_write_register(BMP390_I2C_ADDR, int_ctrl_reg, config)) {
-    Serial.println("Failed to write INT_CTRL");
+    log("Failed to write INT_CTRL");
     return false;
   }
 
-  Serial.println("BMP390 interrupt enabled (data-ready only)");
+  log("BMP390 interrupt enabled (data-ready only)");
   return true;
 }
 
@@ -154,7 +154,7 @@ void Altimeter::initAltimeter()
 {
   if (!bmp.begin_I2C(0x77, &Wire1))
   {
-    Serial.println("BMP390 not found!");
+    log("BMP390 not found!");
     teensy41.setLEDStatus(false);
     while (1);
   }
@@ -167,7 +167,7 @@ void Altimeter::initAltimeter()
 
   if (!enableBmp390Interrupt())
   {
-    Serial.println("Failed to enable BMP390 interrupt!");
+    log("Failed to enable BMP390 interrupt!");
     while (1);
   }
 

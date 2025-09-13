@@ -7,11 +7,13 @@ IntervalTimer startTimer;
 IntervalTimer stopTimer;
 
 extern IMU BNO08X;
+extern bool debugMode;
 
 static const int servoP1 = 6, servoP2 = 7, servoP3 = 8, servoP4 = 9;
 static float s1 = 0, s2 = 0, s3 = 0, s4 = 0;
 static int minTravelDegrees = 0, maxTravelDegrees = 90;
 static int minTravelMicros = 1100, maxTravelMicros = 1900;
+static float minStep = 0.1125;
 
 static int pulseWidthArray[4];
 static volatile int PWMIndex = 0;
@@ -45,10 +47,16 @@ void Actuators::updateAngles()
   //s1 = 0; // Min - 45 degrees counterclockwise
   //s1 = 45; // Neutral - 0 degrees
   //s1 = 90; // Max - 45 degrees clockwise
-  s1 = constrain(45 - BNO08X.getPitchCorrection() + BNO08X.getRollCorrection() , 25, 65);
-  s2 = constrain(45 + BNO08X.getPitchCorrection() + BNO08X.getRollCorrection() , 25, 65);
-  s3 = constrain(45  + BNO08X.getRollCorrection() + BNO08X.getYawCorrection(), 25, 65);
-  s4 = constrain(45  + BNO08X.getRollCorrection() - BNO08X.getYawCorrection(), 25, 65);
+  s1 = round(constrain(45 - BNO08X.getPitchCorrection() + BNO08X.getRollCorrection() , 25, 65) / minStep) * minStep;
+  s2 = round(constrain(45 + BNO08X.getPitchCorrection() + BNO08X.getRollCorrection() , 25, 65) / minStep) * minStep;
+  s3 = round(constrain(45  + BNO08X.getRollCorrection() + BNO08X.getYawCorrection(), 25, 65) / minStep) * minStep;
+  s4 = round(constrain(45  + BNO08X.getRollCorrection() - BNO08X.getYawCorrection(), 25, 65) / minStep) * minStep;
+
+  if (debugMode)
+  {
+    Serial.printf("| Servo 1: %f | Servo 2: %f | Servo 3: %f | Servo 4: %f |\n", s1,s2,s3,s4);
+  }
+
 }
 
 bool Actuators::sortByAngle(Servo &a, Servo &b)

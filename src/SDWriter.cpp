@@ -13,10 +13,6 @@
 #define TELEMETRY_FILENAME "Telemetry.csv"
 #define TELEMETRY_FILE_SIZE 100 * 1024 * 1024 // 100 MB
 #define LOG_FILENAME "Log.txt"
-#define LOG_FILE_SIZE 1 * 1024 // 25 kb
-
-const int LOGBUFFSIZE = 1 * 1024; // 1 kb
-char logBuffer[LOGBUFFSIZE];
 
 static unsigned long lastLogTime = 0;
 static unsigned long lastSyncTime = 0;
@@ -41,17 +37,19 @@ static unsigned long syncInterval = 500; // ms
 // Initializes the SD card. Holds in an indefinite loop if the Initialization fails
 void SDWriter::initSDCard()
 {
-    Serial.println("Initializing SD card...");
+    log("Initializing SD card...");
     if (!sd.begin(SD_CONFIG))
     {
-        Serial.println("Insert/check SD card");
+        log("Insert/check SD card");
         teensy41.setLEDStatus(false);
         while (1);
     }
 
+    if(!loggingEnabled) return;
+
     if (!telemetryFile.open(TELEMETRY_FILENAME, O_WRONLY | O_CREAT | O_AT_END))
     {
-        Serial.println("Telemetry file open failed...");
+        log("Telemetry file open failed...");
         while (1);
     }
 
@@ -59,7 +57,7 @@ void SDWriter::initSDCard()
     {
         if (!telemetryFile.preAllocate(TELEMETRY_FILE_SIZE))
         {
-            Serial.println("Telemetry file preallocation failed...");
+            log("Telemetry file preallocation failed...");
             telemetryFile.close();
             while (1);
         }
@@ -69,7 +67,7 @@ void SDWriter::initSDCard()
 
     if (!logFile.open(LOG_FILENAME, O_WRONLY | O_CREAT | O_AT_END))
     {
-        Serial.println("Log file open failed...");
+        log("Log file open failed...");
         while (1);
     }
 
@@ -79,7 +77,7 @@ void SDWriter::initSDCard()
         logFile.close();
     }
     rb.begin(&telemetryFile);
-    Serial.println("SD card initialization complete");
+    log("SD card initialization complete");
 }
 
 // Main function that writes to the SD card. Uses commas as delimiter
@@ -149,9 +147,14 @@ void SDWriter::logTelemetry(unsigned long ms, unsigned long initTimeTaken, unsig
     }
 }
 
-void logAvionicsInit(const char* line)
+void SDWriter::logAvionicsInit(const char* line)
 {
+    if (debugMode) Serial.println(line);
 
-    if (!debugMode) return;
-    Serial.println(line);
+    if (loggingEnabled)
+    {
+        logFile.open(LOG_FILENAME, O_WRONLY | O_CREAT | O_AT_END);
+        logFile.println(line);
+        logFile.close();
+    }
 }

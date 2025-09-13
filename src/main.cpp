@@ -15,7 +15,9 @@ static unsigned long initTimeTaken;
 static const unsigned long setGNSSFrequency = 100; // ms - 100ms = 10hz
 
 volatile bool BMP390DataReady = false;
-bool debugMode = false; // Enables Serial and prints line to console if true
+
+bool debugMode = true; // Enables Serial and prints line to console if true
+volatile bool loggingEnabled = false;
 
 Teensy41 teensy41;
 IMU BNO08X;
@@ -31,14 +33,14 @@ void BMP390Interrupt()
 
 // Initializes and calibrates the components during setup()
 void setup() {
-  Serial.begin(2000000);
+  if (debugMode) Serial.begin(2000000);
   
   pinMode(3, INPUT);
   attachInterrupt(digitalPinToInterrupt(3), BMP390Interrupt, FALLING);
   
   delay(3000);
   sdWriter.initSDCard();
-  Serial.printf("CPU speed: %lu MHz\n", F_CPU / 1000000);
+  log("CPU speed: %lu MHz", F_CPU / 1000000);
   teensy41.measureBattery();
   teensy41.checkI2CLines();
 
@@ -50,19 +52,19 @@ void setup() {
 
   delay(3000); // 60,000 ms set to allow nosecone installation before program runs
 
-  Serial.println("Initializing components...");
+  log("Initializing components...");
   BMP390.initAltimeter();
   fins.initServos();
   BNO08X.initIMU();
   ZOEM8Q.initGnss();
   //setOrigin(50);
-  Serial.println("Components initialized");
+  log("Components initialized");
 
   BMP390.calibrateAltimeter(1000); // Sample amount
   BNO08X.calibrateIMU(100); // Sample amount
 
   teensy41.setLEDStatus(true);
-  Serial.println("System ready");
+  log("System ready");
   initTimeTaken = millis();
 }
 
@@ -86,11 +88,10 @@ void loop()
   }
 
   //getAvgAlt(newDataFlag);
-
-  //updateIMUandServos();
+  BNO08X.updateOrientation();
   //ZOEM8Q.getGnssCoords();
 
-  //sdWriter.logTelemetry(millis(), initTimeTaken, logInterval);
+  sdWriter.logTelemetry(millis(), initTimeTaken, logInterval);
 
 
   // unsigned long endTime = micros();
