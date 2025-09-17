@@ -45,10 +45,10 @@ static float alpha = 0.7;
 // Resets IMU as it is one of the main culprits that jams the I2C line low
 void IMU::resetBNO085()
 {
-  pinMode(2, OUTPUT);
-  digitalWrite(2, LOW);
+  pinMode(3, OUTPUT);
+  digitalWrite(3, LOW);
   delay(1000);
-  digitalWrite(2, HIGH);
+  digitalWrite(3, HIGH);
   delay(2000);
 }
 
@@ -65,7 +65,7 @@ void IMU::initIMU()
 }
 
 // --- PID update helper ---
-float IMU::updatePID(PID &pid, float setpoint, float measurement, float dt) {
+float IMU::updatePID(PID &pid, float setpoint, float measurement, float velocity, float dt) {
   float error = setpoint - measurement;
 
   // Integrate error with anti-windup
@@ -136,9 +136,9 @@ void IMU::updateOrientation()
   filteredRoll  = alpha * filteredRoll  + (1 - alpha) * roll;
   filteredYaw   = alpha * filteredYaw   + (1 - alpha) * yaw;
 
-  // if (abs(filteredPitch) < deadband) filteredPitch = 0;
-  // if (abs(filteredRoll)  < deadband) filteredRoll = 0;
-  // if (abs(filteredYaw)   < deadband) filteredYaw = 0;
+  if (abs(filteredPitch) < deadband) filteredPitch = 0;
+  if (abs(filteredRoll)  < deadband) filteredRoll = 0;
+  if (abs(filteredYaw)   < deadband) filteredYaw = 0;
 
   // --- Calculate delta time for PID ---
   unsigned long now = millis();
@@ -147,9 +147,9 @@ void IMU::updateOrientation()
   lastUpdate = now;
 
   // --- Update PID controllers ---
-  pitchCorrection = updatePID(pidPitch, 0.0, filteredPitch, dt);
-  rollCorrection  = updatePID(pidRoll,  0.0, filteredRoll,  dt);
-  yawCorrection   = updatePID(pidYaw,   0.0, filteredYaw,   dt);
+  pitchCorrection = updatePID(pidPitch, 0.0, filteredPitch, BMP390.getVelocity(), dt);
+  rollCorrection  = updatePID(pidRoll,  0.0, filteredRoll, BMP390.getVelocity(),  dt);
+  yawCorrection   = updatePID(pidYaw,   0.0, filteredYaw, BMP390.getVelocity(),   dt);
 
   // === Combine Orientation + Velocity into Control ===
   pitchCorrection = constrain(pitchCorrection, -maxDeflectionAngle, maxDeflectionAngle);

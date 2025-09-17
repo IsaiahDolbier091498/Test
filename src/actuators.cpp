@@ -54,7 +54,7 @@ void Actuators::updateAngles()
 
   if (debugMode)
   {
-    Serial.printf("| Servo 1: %f | Servo 2: %f | Servo 3: %f | Servo 4: %f |\n", s1,s2,s3,s4);
+    Serial.printf("| Servo 1: %.4f | Servo 2: %.4f | Servo 3: %.4f | Servo 4: %.4f |\n", s1,s2,s3,s4);
   }
 
 }

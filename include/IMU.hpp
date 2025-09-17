@@ -16,7 +16,7 @@ struct PID {
 class IMU
 {
   private:
-  float updatePID(PID &pid, float setpoint, float measurement, float dt);
+  float updatePID(PID &pid, float setpoint, float measurement, float veloty, float dt);
 
   public:
     void resetBNO085();

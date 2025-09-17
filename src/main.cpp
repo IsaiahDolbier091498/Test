@@ -35,8 +35,8 @@ void BMP390Interrupt()
 void setup() {
   if (debugMode) Serial.begin(2000000);
   
-  pinMode(3, INPUT);
-  attachInterrupt(digitalPinToInterrupt(3), BMP390Interrupt, FALLING);
+  pinMode(2, INPUT);
+  attachInterrupt(digitalPinToInterrupt(2), BMP390Interrupt, FALLING);
   
   delay(3000);
   sdWriter.initSDCard();
