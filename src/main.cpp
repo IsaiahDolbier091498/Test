@@ -1,19 +1,30 @@
 #include <Arduino.h>
-#include "altimeter.h"
-#include "control.h"
-#include "SDWriter.h"
-#include "debug.h"
-#include "GNSS.h"
+#include "altimeter.hpp"
+#include "IMU.hpp"
+#include "actuators.hpp"
+#include "SDWriter.hpp"
+#include "teensy41.hpp"
+#include "GNSS.hpp"
 #include <Wire.h>
-#include "events.h"
+#include "events.hpp"
 
-const unsigned long logInterval = 40;
+static const unsigned long logInterval = 40;
 
-unsigned long initTimeTaken;
+static unsigned long initTimeTaken;
 
-unsigned long setGNSSFrequency = 100; // ms - 100ms = 10hz
+static const unsigned long setGNSSFrequency = 100; // ms - 100ms = 10hz
 
 volatile bool BMP390DataReady = false;
+
+bool debugMode = true; // Enables Serial and prints line to console if true
+volatile bool loggingEnabled = false;
+
+Teensy41 teensy41;
+IMU BNO08X;
+Altimeter BMP390;
+GNSS ZOEM8Q;
+Actuators fins;
+SDWriter sdWriter;
 
 void BMP390Interrupt()
 {
@@ -22,16 +33,16 @@ void BMP390Interrupt()
 
 // Initializes and calibrates the components during setup()
 void setup() {
-  Serial.begin(2000000);
-  Serial1.begin(115200);
-
-  pinMode(3, INPUT);
-  attachInterrupt(digitalPinToInterrupt(3), BMP390Interrupt, FALLING);
-
+  if (debugMode) Serial.begin(2000000);
+  
+  pinMode(2, INPUT);
+  attachInterrupt(digitalPinToInterrupt(2), BMP390Interrupt, FALLING);
+  
   delay(3000);
-  Serial.printf("CPU speed: %lu MHz\n", F_CPU / 1000000);
-  measureBattery();
-  checkI2CLines();
+  sdWriter.initSDCard();
+  log("CPU speed: %lu MHz", F_CPU / 1000000);
+  teensy41.measureBattery();
+  teensy41.checkI2CLines();
 
   Wire.begin();
   Wire.setClock(400000);
@@ -41,20 +52,19 @@ void setup() {
 
   delay(3000); // 60,000 ms set to allow nosecone installation before program runs
 
-  Serial.println("Initializing components...");
-  initSensors();
-  initServos();
-  initIMU();
-  initSDCard();
-  initGnss();
+  log("Initializing components...");
+  BMP390.initAltimeter();
+  fins.initServos();
+  BNO08X.initIMU();
+  ZOEM8Q.initGnss();
   //setOrigin(50);
-  Serial.println("Components initialized");
+  log("Components initialized");
 
-  calibrateAltimeter(100); // Sample amount
-  calibrateIMU(1000); // Sample amount
+  BMP390.calibrateAltimeter(1000); // Sample amount
+  BNO08X.calibrateIMU(100); // Sample amount
 
-  nominalStatusLED();
-  Serial.println("System ready");
+  teensy41.setLEDStatus(true);
+  log("System ready");
   initTimeTaken = millis();
 }
 
@@ -64,23 +74,24 @@ void setup() {
 // unsigned long totalTime = 0;
 // int loopCount = 0;
 
-void loop() 
+void loop()
 {
   //unsigned long startTime = micros();
+
+  fins.updateAngles();
 
   if (BMP390DataReady)
   {
     newDataFlag = true;
     BMP390DataReady = false;
-    updateAltitude();
+    BMP390.updateAltitude();
   }
 
   //getAvgAlt(newDataFlag);
+  BNO08X.updateOrientation();
+  //ZOEM8Q.getGnssCoords();
 
-  updateIMUandServos();
-  getGnssCoords();
-
-  //logTelemetry(millis(), initTimeTaken, 50);
+  sdWriter.logTelemetry(millis(), initTimeTaken, logInterval);
 
 
   // unsigned long endTime = micros();

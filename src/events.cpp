@@ -1,6 +1,8 @@
 #include <Arduino.h>
-#include "altimeter.h"
+#include "altimeter.hpp"
 #include <cstring>
+
+extern Altimeter BMP390;
 
 float avgAltitude = 0;
 
@@ -29,27 +31,11 @@ float getAvgAlt(bool newData)
 
     if (newData)
     {
-    altitudeBuffer[altBufferIndex] = relativeAltitude;
+    altitudeBuffer[altBufferIndex] = BMP390.getRelativeAltitude();
     altBufferIndex++;
     }
 
     return avgAltitude;
-}
-
-void ejectionChargeMain()
-{
-    pinMode(31, INPUT);
-    digitalWrite(31, HIGH);
-    delay(5000);
-    digitalWrite(31, LOW);
-}
-
-void ejectionChargeBackup()
-{
-    pinMode(34, INPUT);
-    digitalWrite(34, HIGH);
-    delay(5000);
-    digitalWrite(34, LOW);
 }
 
 void preLaunch()

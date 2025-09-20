@@ -1,28 +1,30 @@
 #include <Wire.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
-#include "debug.h"
+#include "teensy41.hpp"
+#include "GNSS.hpp"
+#include "SDWriter.hpp"
 
 SFE_UBLOX_GNSS gnss;
-const float alpha = 0.1;
-float filteredLat;
-float filteredLong;
-float latOrigin;
-float longOrigin;
+extern Teensy41 teensy41;
+static const float alpha = 0.1;
+static float filteredLat;
+static float filteredLong;
+static float latOrigin;
+static float longOrigin;
 
-float currentLat;
-float currentLong;
-int fixType;
+static float currentLat;
+static float currentLong;
+static int fixType;
 
-void initGnss()
+void GNSS::initGnss()
 {
     if (!gnss.begin(Wire))
     {
-        Serial.println("ZOE-M8Q not found");
-        errorStatusLED();
+        log("ZOE-M8Q not found");
+        teensy41.setLEDStatus(false);
         while (1);
     }
-
-    Serial.println("GNSS initialized");
+    log("GNSS initialized");
 
     gnss.setNavigationFrequency(10);
     gnss.setUART1Output(0);
@@ -54,7 +56,7 @@ void initGnss()
     // delay(5000);
 }
 
-void setOrigin(int samples)
+void GNSS::setOrigin(int samples)
 {
     for (int i = 0; i < samples;)
     {
@@ -69,14 +71,11 @@ void setOrigin(int samples)
     latOrigin = filteredLat;
     longOrigin = filteredLong;
 
-    Serial.print("Lat origin: ");
-    Serial.println(latOrigin / 1e7, 8);
-
-    Serial.print("Long origin: ");
-    Serial.println(longOrigin / 1e7, 8);
+    log("Lat origin: %.8f", latOrigin / 1e7);
+    log("Long origin: %.8f", longOrigin / 1e7);
 }
 
-void getGnssCoords()
+void GNSS::getGnssCoords()
 {
     if(!gnss.getPVT()) return;
         // Serial.print("Fix type: ");
@@ -93,4 +92,14 @@ void getGnssCoords()
         fixType = gnss.getFixType();
         currentLat = gnss.getLatitude();
         currentLong = gnss.getLongitude();
+}
+
+float GNSS::getOriginLat()
+{
+    return latOrigin / 1e7;
+}
+
+float GNSS::getOriginLong()
+{
+    return longOrigin / 1e7;
 }

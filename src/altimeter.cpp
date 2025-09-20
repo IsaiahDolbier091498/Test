@@ -1,91 +1,53 @@
-#include "altimeter.h"
+#include "altimeter.hpp"
 #include <Adafruit_BMP3XX.h>
 #include <Wire.h>
-#include "debug.h"
+#include "teensy41.hpp"
+#include "SDWriter.hpp"
 
 // --- Altimeter ---
-Adafruit_BMP3XX bmp;
-const float seaLevelPressure = 1013.25; // in hPa
-int samples;
-float drift;
-bool launchDetected = false;
-unsigned long lastTime = 0;
-
 #define BMP390_I2C_ADDR 0x77
+Adafruit_BMP3XX bmp;
 
-// Writes command to the register. In this case it's to enable the interrupt pin
-// Using the interrupt pin allows the sensor to be read only when ready. performReading() is blocking.
-bool i2c_write_register(uint8_t deviceAddr, uint8_t regAddr, uint8_t value) {
-  Wire1.beginTransmission(deviceAddr);
-  Wire1.write(regAddr);
-  Wire1.write(value);
-  return Wire1.endTransmission() == 0; // returns true if successful
-}
+extern Teensy41 teensy41;
 
-bool enableBmp390Interrupt() {
-  const uint8_t int_ctrl_reg = 0x19;
-  const uint8_t config = 0x40;
+static const float seaLevelPressure = 1013.25; // in hPa
+static const float pressureExponent = 0.190284;
+static const float altitudeScale = 44330.0;
 
-  if (!i2c_write_register(BMP390_I2C_ADDR, int_ctrl_reg, config)) {
-    Serial.println("Failed to write INT_CTRL");
-    return false;
-  }
-
-  Serial.println("BMP390 interrupt enabled (data-ready only)");
-  return true;
-}
-
-// Initializes I2C and sensor
-void initSensors() {
-  if (!bmp.begin_I2C(0x77, &Wire1)) {
-    Serial.println("BMP390 not found!");
-    errorStatusLED();
-    while (1);
-  }
-
-  bmp.setTemperatureOversampling(BMP3_NO_OVERSAMPLING);
-  bmp.setPressureOversampling(BMP3_OVERSAMPLING_2X);
-  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_DISABLE);
-  bmp.setOutputDataRate(BMP3_ODR_200_HZ);
-  delay(100);
-
-  if (!enableBmp390Interrupt()) 
-  {
-    Serial.println("Failed to enable BMP390 interrupt!");
-    while (1);
-  }
-
-  lastTime = millis();
-}
+static int samples;
+static float drift;
+static bool launchDetected = false;
+static unsigned long lastTime = 0;
 
 // Kalman state variables
 float state[2] = {0.0, 0.0}; // state[0] = altitude, state[1] = velocity
-float covariance[2][2] = {
+float covariance[2][2] =
+{
   {1.0, 0.0},
   {0.0, 1.0}
 };
 
 // Kalman filter tuning parameters
-float measurementNoise = 6.0;      // Measurement noise
-float processAltitudeNoise = 0.015; // Process noise for altitude
-float processVelocityNoise = 0.05;  // Process noise for velocity
+static const float measurementNoise = 6.0;      // Measurement noise
+static const float processAltitudeNoise = 0.015; // Process noise for altitude
+static const float processVelocityNoise = 0.05;  // Process noise for velocity
 
 // Outputs
-float rawAltitude = 0.0, filteredAltitude = 0.0, relativeAltitude = 0.0;
-float velocity = 0.0;
-bool initialAltitudeSet = false;
-float initialAltitude = 0.0;
-int filterCount = 0;
+static float rawAltitude, filteredAltitude, relativeAltitude = 0.0;
+static float velocity = 0.0;
+static bool initialAltitudeSet = false;
+static float initialAltitude = 0.0;
+static int filterCount = 0;
 
 // Runs the 2 state Kalman filter to get altitude and velocity
-void updateAltitude() {
-
+void Altimeter::updateAltitude()
+{
   float pressure = bmp.readPressure();
   if(isnan(pressure)) return;
 
   // Read and convert to altitude
   pressure /= 100.0;
-  rawAltitude = (1 - pow(pressure / seaLevelPressure, 0.190284)) * 44330.0;
+  rawAltitude = (1 - pow(pressure / seaLevelPressure, pressureExponent)) * altitudeScale;
 
   // Time delta in seconds
   unsigned long now = millis();
@@ -128,16 +90,18 @@ void updateAltitude() {
   filterCount++;
 
   // Set baseline after stable reading
-  if (!initialAltitudeSet && filterCount >= samples) {
+  if (!initialAltitudeSet && filterCount >= samples)
+  {
     initialAltitude = filteredAltitude;
     initialAltitudeSet = true;
-    Serial.println("Initial altitude set...");
+    log("Initial altitude set...");
   }
 
   relativeAltitude = filteredAltitude - initialAltitude;
 
   // Adjusts for drift when stationary
-  if (state[1] < 0.6 && filterCount > samples && launchDetected == false) {
+  if (state[1] < 0.6 && filterCount > samples && launchDetected == false)
+  {
   drift = filteredAltitude - initialAltitude;
   initialAltitude += drift * 0.2;
   }
@@ -150,15 +114,74 @@ void updateAltitude() {
   // Serial.print(" | Alt: "); Serial.println(relativeAltitude);
 }
 
-void calibrateAltimeter(int sampleAmount)
+void Altimeter::calibrateAltimeter(int sampleAmount)
 {
-  Serial.println("Calibrating altimeter...");
+  log("Calibrating altimeter...");
   samples = sampleAmount;
   for (int i = 0; i < sampleAmount; i++)
   {
     while (!bmp.performReading()) delay (5);
     updateAltitude();
   }
+}
+
+// Writes command to the register. In this case it's to enable the interrupt pin
+// Using the interrupt pin allows the sensor to be read only when ready. performReading() is blocking.
+bool Altimeter::i2c_write_register(uint8_t deviceAddr, uint8_t regAddr, uint8_t value)
+{
+  Wire1.beginTransmission(deviceAddr);
+  Wire1.write(regAddr);
+  Wire1.write(value);
+  return Wire1.endTransmission() == 0; // returns true if successful
+}
+
+bool Altimeter::enableBmp390Interrupt()
+{
+  const uint8_t int_ctrl_reg = 0x19;
+  const uint8_t config = 0x40;
+
+  if (!i2c_write_register(BMP390_I2C_ADDR, int_ctrl_reg, config)) {
+    log("Failed to write INT_CTRL");
+    return false;
+  }
+
+  log("BMP390 interrupt enabled (data-ready only)");
+  return true;
+}
+
+// Initializes I2C and sensor
+void Altimeter::initAltimeter()
+{
+  if (!bmp.begin_I2C(0x77, &Wire1))
+  {
+    log("BMP390 not found!");
+    teensy41.setLEDStatus(false);
+    while (1);
+  }
+
+  bmp.setTemperatureOversampling(BMP3_NO_OVERSAMPLING);
+  bmp.setPressureOversampling(BMP3_OVERSAMPLING_2X);
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_DISABLE);
+  bmp.setOutputDataRate(BMP3_ODR_200_HZ);
+  delay(100);
+
+  if (!enableBmp390Interrupt())
+  {
+    log("Failed to enable BMP390 interrupt!");
+    while (1);
+  }
+
+  lastTime = millis();
+}
+
+float Altimeter::getVelocity()
+{
+  return velocity;
+}
+
+float Altimeter::getRelativeAltitude()
+{
+  return relativeAltitude;
 }
 
 /* --- Kalman Filter ---
@@ -186,7 +209,7 @@ Output variables:
 
 
 updateAltitude():
-- if (!bmp.performReading()) return; 
+- if (!bmp.performReading()) return;
   function only runs when the sensor successfully provides a new reading
 
 - float pressure = bmp.pressure / 100.0;
